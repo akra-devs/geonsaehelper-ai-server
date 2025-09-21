@@ -12,7 +12,7 @@ data class ProviderSettings(
 data class AiProperties(
     var defaultProvider: Provider = Provider.OLLAMA,
     var defaultSystemPrompt: String = "You are a helpful study assistant.",
-    var ollama: ProviderSettings = ProviderSettings(model = "llama3.1:8b"),
+    var ollama: ProviderSettings = ProviderSettings(model = "gps-oss:20b"),
     var openai: ProviderSettings = ProviderSettings(model = "gpt-4o-mini")
 ) {
     enum class Provider {

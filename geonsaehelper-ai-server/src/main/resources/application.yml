@@ -1,10 +1,22 @@
 spring:
+  application:
+    name: geonsaehelper-ai-server
   ai:
-    model:
-      chat: ollama
     ollama:
-      base-url: http://localhost:11434
+      base-url: http://localhost:11434/
       chat:
         options:
-          model: gemma3:12b
-          temperature: 0.7
+          model: ${app.ai.ollama.model}
+    openai:
+      enabled: false
+
+app:
+  ai:
+    default-provider: OLLAMA
+    default-system-prompt: >-
+      You are a tutor that helps Geonsae users practice and review content concisely.
+    ollama:
+      model: gpt-oss:20b
+    openai:
+      model: gpt-4o-mini
+      key: 1234

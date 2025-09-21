@@ -9,7 +9,7 @@ group = "com.akra"
 version = "0.0.1-SNAPSHOT"
 description = "geonsaehelper-ai-server"
 
-val springAiVersion = "1.0.0"
+val springAiVersion = "1.0.0-M6"
 
 java {
     toolchain {
@@ -25,18 +25,12 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
+    implementation(platform("org.springframework.ai:spring-ai-bom:$springAiVersion"))
     implementation("org.springframework.ai:spring-ai-ollama-spring-boot-starter")
-    implementation("org.springframework.ai:spring-ai-openai-spring-boot-starter")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-}
-
-dependencyManagement {
-    imports {
-        mavenBom("org.springframework.ai:spring-ai-bom:$springAiVersion")
-    }
 }
 
 kotlin {
