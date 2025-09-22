@@ -3,7 +3,6 @@ package com.akra.geonsaehelperaiserver.chunk
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.ai.chat.client.ChatClient
-import org.springframework.ai.chat.client.ChatClientRequest
 import org.springframework.ai.chat.messages.SystemMessage
 import org.springframework.ai.chat.messages.UserMessage
 import org.springframework.ai.chat.model.ChatModel
@@ -28,7 +27,7 @@ class SemanticChunkService(
 
     private val chunkListType = object : TypeReference<List<String>>() {}
 
-    fun chunkText(text: String, options: SemanticChunkOptions = SemanticChunkOptions()): List<String> {
+    fun chunkText(text: String, options: SemanticChunkOptions = SemanticChunkOptions()): ChunkResponse {
         val startMillis = System.currentTimeMillis()
         val normalized = MarkdownNormalizer.normalize(text)
         val afterNormalize = System.currentTimeMillis()
@@ -36,7 +35,7 @@ class SemanticChunkService(
         if (normalized.isEmpty()) {
             println("[SemanticChunkService] mechanical chunking skipped (empty input)")
             println("[SemanticChunkService] semantic chunking skipped (empty input)")
-            return emptyList()
+            return ChunkResponse(emptyList())
         }
 
         val mechanicalChunks = OverlappingTextChunker.chunk(
@@ -50,7 +49,7 @@ class SemanticChunkService(
         val semanticChunks = mutableListOf<String>()
         val semanticStart = System.currentTimeMillis()
 
-        mechanicalChunks.forEachIndexed { blockIndex, block ->
+        val results = mechanicalChunks.mapIndexed { blockIndex, block ->
             val systemPrompt = buildSystemPrompt(options.roleInstructions)
             val userPayload = mapOf(
                 "block_index" to blockIndex,
@@ -68,36 +67,20 @@ class SemanticChunkService(
             )
 
             val tempOption = OllamaOptions.builder().numCtx(2048).build()
-            val temp = ChatClient
+            val spec = ChatClient
                 .create(chatModel)
                 .prompt(prompt)
                 .options(tempOption)
-//            val response = chatModel.call(prompt)
-            val response = temp.call()
-//            val content = response.results.joinToString(separator = "\n") { it.output?.text.orEmpty() }
-//                .ifBlank { throw IllegalStateException("Semantic chunker returned empty response") }
-            val content = response.content() ?: ""
-            val sanitizedContent = SemanticChunkResponseParser.extractChunkArray(content)
 
-            val dtoChunks = runCatching {
-                objectMapper.readValue(sanitizedContent, chunkListType)
-            }.getOrElse { ex ->
-                throw IllegalStateException("Failed to parse semantic chunks JSON", ex)
-            }
+            val response = spec.call().entity(ChunkResponse::class.java) ?: ChunkResponse(emptyList())
 
-            dtoChunks.forEach { dto ->
-                val cleaned = dto.trim()
-                if (cleaned.isNotEmpty()) {
-                    semanticChunks += SemanticChunkAfterNormalizer.normalize(cleaned)
-                }
-            }
             println("semanticChunks : $blockIndex 완료")
+            response
         }
 
         val semanticDuration = System.currentTimeMillis() - semanticStart
         println("[SemanticChunkService] semantic chunking took ${semanticDuration} ms (blocks=${mechanicalChunks.size}, chunks=${semanticChunks.size})")
-
-        return semanticChunks
+        return ChunkResponse(content = results.flatMap { it.content })
     }
 
     private fun buildSystemPrompt(roleInstructions: String?): String {
@@ -117,5 +100,8 @@ class SemanticChunkService(
             basePrompt + "\n추가 역할 지침: ${roleInstructions.trim()}"
         }
     }
-
 }
+
+data class ChunkResponse(
+    val content: List<String>,
+)

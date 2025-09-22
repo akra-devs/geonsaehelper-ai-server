@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.RequestPart
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
 import org.springframework.web.server.ResponseStatusException
-import kotlin.text.Charsets
 
 @RestController
 @RequestMapping("/api/chunks")
@@ -52,6 +51,6 @@ class ChunkController(
         )
 
         val chunks = semanticChunkService.chunkText(rawText, options)
-        return SemanticChunkResponse(chunks)
+        return SemanticChunkResponse(chunks.content)
     }
 }
