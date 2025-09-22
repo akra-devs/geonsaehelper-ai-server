@@ -6,7 +6,7 @@ package com.akra.geonsaehelperaiserver.chunk
 object MarkdownNormalizer {
 
     private val htmlTagRegex = "<[^>]+>".toRegex(setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE))
-    private val collapsingWhitespaceRegex = "\s+".toRegex()
+    private val collapsingWhitespaceRegex = "\\s+".toRegex()
     private val emphasisMarkers = listOf("**", "__", "~~", "*", "_")
 
     fun normalize(text: String): String {
