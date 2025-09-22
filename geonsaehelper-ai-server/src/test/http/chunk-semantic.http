@@ -1,0 +1,56 @@
+### Semantic chunking request example
+POST http://localhost:8080/api/chunks/semantic
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="HUG_POLICY.md"
+Content-Type: text/markdown
+
+< HUG_POLICY.md
+--WebAppBoundary
+Content-Disposition: form-data; name="roleInstructions"
+
+필요시 추가 역할 지침을 여기에 작성
+--WebAppBoundary
+Content-Disposition: form-data; name="chunkSizeHint"
+
+400
+--WebAppBoundary
+Content-Disposition: form-data; name="maxChunkSize"
+
+600
+--WebAppBoundary
+Content-Disposition: form-data; name="mechanicalOverlap"
+
+200
+--WebAppBoundary--
+
+### Direct Ollama call for semantic chunk block
+POST http://localhost:11434/api/chat
+Content-Type: application/json
+
+{
+  "model": "gpt-oss:20b",
+  "stream": false,
+  "messages": [
+    {
+      "role": "system",
+      "content": "당신은 텍스트를 의미 단위로 분할하는 도우미입니다.\n- 출력은 JSON 배열 하나이며 각 요소는 텍스트 Chunk(String)입니다.\n- 청크는 입력 순서와 내용을 유지하고, 절대로 새로운 문장을 만들어내지 않습니다.\n- 기계적 분할에서 생긴 겹침 부분은 앞뒤 청크는 최소한만 조정하되, 그 외 원문 내용은 그대로 보존하세요.\n- 요청된 chunk_size_hint를 우선 적용하되 의미 단절을 피하기 위해 약간 짧거나 길어질 수 있습니다. max_chunk_size는 절대 초과하지 마세요.\n- 차이가 애매한 경계는 앞뒤 청크를 조금 잘라 명확하게 분리합니다.\n- JSON 외 다른 텍스트는 추가하지 마세요."
+    },
+    {
+      "role": "user",
+      "content": "{ \"block_index\": 0, \"chunk_size_hint\": 900, \"max_chunk_size\": 1200, \"text\": \"여기에 실험할 마크다운 청크 내용을 넣어주세요\" }"
+    }
+  ]
+}
+
+### Direct Ollama embeddings call
+POST http://localhost:11434/api/embeddings
+Content-Type: application/json
+
+{
+  "model": "embeddinggemma:300m",
+  "input": [
+    "임베딩 벡터를 생성할 텍스트를 여기에 넣어보세요."
+  ]
+}
