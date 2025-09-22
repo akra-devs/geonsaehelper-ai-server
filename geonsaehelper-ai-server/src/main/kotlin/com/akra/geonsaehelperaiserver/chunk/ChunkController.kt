@@ -1,11 +1,15 @@
 package com.akra.geonsaehelperaiserver.chunk
 
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.RequestPart
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.multipart.MultipartFile
 import org.springframework.web.server.ResponseStatusException
+import kotlin.text.Charsets
 
 @RestController
 @RequestMapping("/api/chunks")
@@ -13,31 +17,38 @@ class ChunkController(
     private val semanticChunkService: SemanticChunkService
 ) {
 
-    data class SemanticChunkRequest(
-        val text: String,
-        val roleInstructions: String? = null,
-        val chunkSizeHint: Int? = null,
-        val maxChunkSize: Int? = null,
-        val mechanicalOverlap: Int? = null
-    )
-
     data class SemanticChunkResponse(
         val chunks: List<String>
     )
 
-    @PostMapping("/semantic")
-    fun chunkSemantically(@RequestBody request: SemanticChunkRequest): SemanticChunkResponse {
-        val rawText = request.text.trim()
-        if (rawText.isEmpty()) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "text must not be blank")
+    @PostMapping("/semantic", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    fun chunkSemantically(
+        @RequestPart("file") file: MultipartFile,
+        @RequestParam("roleInstructions", required = false) roleInstructions: String?,
+        @RequestParam("chunkSizeHint", required = false) chunkSizeHint: Int?,
+        @RequestParam("maxChunkSize", required = false) maxChunkSize: Int?,
+        @RequestParam("mechanicalOverlap", required = false) mechanicalOverlap: Int?
+    ): SemanticChunkResponse {
+        if (file.isEmpty) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "file must not be empty")
+        }
+
+        val filename = file.originalFilename
+        if (filename.isNullOrBlank() || !filename.lowercase().endsWith(".md")) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "file must have a .md extension")
+        }
+
+        val rawText = file.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+        if (rawText.isBlank()) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "file must not contain only whitespace")
         }
 
         val defaults = SemanticChunkService.SemanticChunkOptions()
-        val options = SemanticChunkService.SemanticChunkOptions(
-            roleInstructions = request.roleInstructions,
-            chunkSizeHint = request.chunkSizeHint ?: defaults.chunkSizeHint,
-            maxChunkSize = request.maxChunkSize ?: defaults.maxChunkSize,
-            mechanicalOverlap = request.mechanicalOverlap ?: defaults.mechanicalOverlap
+        val options = defaults.copy(
+            roleInstructions = roleInstructions ?: defaults.roleInstructions,
+            chunkSizeHint = chunkSizeHint ?: defaults.chunkSizeHint,
+            maxChunkSize = maxChunkSize ?: defaults.maxChunkSize,
+            mechanicalOverlap = mechanicalOverlap ?: defaults.mechanicalOverlap
         )
 
         val chunks = semanticChunkService.chunkText(rawText, options)

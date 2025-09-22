@@ -26,8 +26,13 @@ class SemanticChunkService(
     private val chunkListType = object : TypeReference<List<String>>() {}
 
     fun chunkText(text: String, options: SemanticChunkOptions = SemanticChunkOptions()): List<String> {
+        val startMillis = System.currentTimeMillis()
         val normalized = MarkdownNormalizer.normalize(text)
+        val afterNormalize = System.currentTimeMillis()
+        println("[SemanticChunkService] normalization took ${afterNormalize - startMillis} ms")
         if (normalized.isEmpty()) {
+            println("[SemanticChunkService] mechanical chunking skipped (empty input)")
+            println("[SemanticChunkService] semantic chunking skipped (empty input)")
             return emptyList()
         }
 
@@ -36,8 +41,11 @@ class SemanticChunkService(
             chunkSize = options.maxChunkSize,
             overlap = options.mechanicalOverlap
         )
+        val afterMechanical = System.currentTimeMillis()
+        println("[SemanticChunkService] mechanical chunking took ${afterMechanical - afterNormalize} ms (chunks=${mechanicalChunks.size})")
 
         val semanticChunks = mutableListOf<String>()
+        val semanticStart = System.currentTimeMillis()
 
         mechanicalChunks.forEachIndexed { blockIndex, block ->
             val systemPrompt = buildSystemPrompt(options.roleInstructions)
@@ -47,7 +55,6 @@ class SemanticChunkService(
                 "max_chunk_size" to options.maxChunkSize,
                 "text" to block
             )
-
             val userMessage = objectMapper.writeValueAsString(userPayload)
 
             val prompt = Prompt(
@@ -74,6 +81,9 @@ class SemanticChunkService(
                 }
             }
         }
+
+        val semanticDuration = System.currentTimeMillis() - semanticStart
+        println("[SemanticChunkService] semantic chunking took ${semanticDuration} ms (blocks=${mechanicalChunks.size}, chunks=${semanticChunks.size})")
 
         return semanticChunks
     }
