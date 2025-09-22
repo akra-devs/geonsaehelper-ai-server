@@ -10,6 +10,13 @@ spring:
       embedding:
         options:
           model: ${app.ai.ollama.embedding-model}
+    vectorstore:
+      qdrant:
+        host: localhost
+        port: 6334
+        collection-name: geonsaehelper_embeddings
+        initialize-schema: true
+        use-tls: false
     openai:
       enabled: false
 
@@ -21,6 +28,8 @@ app:
     ollama:
       model: gpt-oss:20b
       embedding-model: embeddinggemma:300m
+    vectorstore:
+      default-top-k: 4
     openai:
       model: gpt-4o-mini
       key: 1234

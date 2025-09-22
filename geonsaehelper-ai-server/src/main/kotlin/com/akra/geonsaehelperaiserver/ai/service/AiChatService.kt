@@ -42,7 +42,7 @@ class AiChatService(
 
         val prompt = Prompt(messages)
         val response = ollamaChatModel.call(prompt)
-        val content = response.results.joinToString(separator = "\n") { it.output.text }
+        val content = response.results.joinToString(separator = "\n") { it.output?.text.orEmpty() }
 
         return AiChatResponse(
             content = content,
