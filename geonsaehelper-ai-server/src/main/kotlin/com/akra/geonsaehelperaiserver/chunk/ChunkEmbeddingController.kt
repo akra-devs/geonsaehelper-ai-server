@@ -13,22 +13,30 @@ import kotlin.text.Charsets
 
 @RestController
 @RequestMapping("/api/chunks")
-class ChunkController(
-    private val semanticChunkService: SemanticChunkService
+class ChunkEmbeddingController(
+    private val chunkEmbeddingService: ChunkEmbeddingService
 ) {
 
-    data class SemanticChunkResponse(
-        val chunks: List<String>
-    )
+    data class ChunkEmbeddingResponse(
+        val items: List<Item>,
+        val dimensions: Int,
+        val model: String?,
+        val provider: String?
+    ) {
+        data class Item(
+            val chunk: String,
+            val embedding: List<Float>
+        )
+    }
 
-    @PostMapping("/semantic", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
-    fun chunkSemantically(
+    @PostMapping("/semantic/embed", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    fun chunkAndEmbed(
         @RequestPart("file") file: MultipartFile,
         @RequestParam("roleInstructions", required = false) roleInstructions: String?,
         @RequestParam("chunkSizeHint", required = false) chunkSizeHint: Int?,
         @RequestParam("maxChunkSize", required = false) maxChunkSize: Int?,
         @RequestParam("mechanicalOverlap", required = false) mechanicalOverlap: Int?
-    ): SemanticChunkResponse {
+    ): ChunkEmbeddingResponse {
         if (file.isEmpty) {
             throw ResponseStatusException(HttpStatus.BAD_REQUEST, "file must not be empty")
         }
@@ -51,7 +59,13 @@ class ChunkController(
             mechanicalOverlap = mechanicalOverlap ?: defaults.mechanicalOverlap
         )
 
-        val chunks = semanticChunkService.chunkText(rawText, options)
-        return SemanticChunkResponse(chunks.content)
+        val result = chunkEmbeddingService.chunkAndEmbed(rawText, options)
+
+        return ChunkEmbeddingResponse(
+            items = result.items.map { ChunkEmbeddingResponse.Item(it.chunk, it.embedding) },
+            dimensions = result.dimensions,
+            model = result.model,
+            provider = result.provider
+        )
     }
 }

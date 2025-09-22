@@ -11,6 +11,10 @@ class VectorStoreService(
     private val properties: VectorStoreProperties,
 ) {
 
+    init {
+        println("[VectorStoreService] Initialized with vector store: ${vectorStore::class.java.name}")
+    }
+
     fun upsert(request: VectorUpsertRequest) {
         if (request.documents.isEmpty()) {
             return
@@ -29,7 +33,9 @@ class VectorStoreService(
             }
         }
 
+        println("[VectorStoreService] Upserting ${documents.size} documents")
         vectorStore.add(documents)
+        println("[VectorStoreService] Upsert complete")
     }
 
     fun search(request: VectorSearchRequest): VectorSearchResponse {
