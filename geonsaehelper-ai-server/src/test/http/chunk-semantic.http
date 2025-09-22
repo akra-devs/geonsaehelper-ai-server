@@ -1,12 +1,13 @@
 ### Semantic chunking request example
-POST http://localhost:8080/api/chunks/semantic
+# @timeout 600
+POST 127.0.0.1:8080/api/chunks/semantic
 Content-Type: multipart/form-data; boundary=WebAppBoundary
 
 --WebAppBoundary
 Content-Disposition: form-data; name="file"; filename="HUG_POLICY.md"
 Content-Type: text/markdown
 
-< HUG_POLICY.md
+< 전세사기피해자 최우선변제금 버팀목 전세자금 대출.MD
 --WebAppBoundary
 Content-Disposition: form-data; name="roleInstructions"
 
@@ -14,11 +15,11 @@ Content-Disposition: form-data; name="roleInstructions"
 --WebAppBoundary
 Content-Disposition: form-data; name="chunkSizeHint"
 
-400
+500
 --WebAppBoundary
 Content-Disposition: form-data; name="maxChunkSize"
 
-600
+1000
 --WebAppBoundary
 Content-Disposition: form-data; name="mechanicalOverlap"
 

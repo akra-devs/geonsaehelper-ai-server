@@ -2,10 +2,13 @@ package com.akra.geonsaehelperaiserver.chunk
 
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
+import org.springframework.ai.chat.client.ChatClient
+import org.springframework.ai.chat.client.ChatClientRequest
 import org.springframework.ai.chat.messages.SystemMessage
 import org.springframework.ai.chat.messages.UserMessage
 import org.springframework.ai.chat.model.ChatModel
 import org.springframework.ai.chat.prompt.Prompt
+import org.springframework.ai.ollama.api.OllamaOptions
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
 
@@ -64,12 +67,20 @@ class SemanticChunkService(
                 )
             )
 
-            val response = chatModel.call(prompt)
-            val content = response.results.joinToString(separator = "\n") { it.output?.text.orEmpty() }
-                .ifBlank { throw IllegalStateException("Semantic chunker returned empty response") }
+            val tempOption = OllamaOptions.builder().numCtx(2048).build()
+            val temp = ChatClient
+                .create(chatModel)
+                .prompt(prompt)
+                .options(tempOption)
+//            val response = chatModel.call(prompt)
+            val response = temp.call()
+//            val content = response.results.joinToString(separator = "\n") { it.output?.text.orEmpty() }
+//                .ifBlank { throw IllegalStateException("Semantic chunker returned empty response") }
+            val content = response.content() ?: ""
+            val sanitizedContent = SemanticChunkResponseParser.extractChunkArray(content)
 
             val dtoChunks = runCatching {
-                objectMapper.readValue(content, chunkListType)
+                objectMapper.readValue(sanitizedContent, chunkListType)
             }.getOrElse { ex ->
                 throw IllegalStateException("Failed to parse semantic chunks JSON", ex)
             }
@@ -77,9 +88,10 @@ class SemanticChunkService(
             dtoChunks.forEach { dto ->
                 val cleaned = dto.trim()
                 if (cleaned.isNotEmpty()) {
-                    semanticChunks += cleaned
+                    semanticChunks += SemanticChunkAfterNormalizer.normalize(cleaned)
                 }
             }
+            println("semanticChunks : $blockIndex 완료")
         }
 
         val semanticDuration = System.currentTimeMillis() - semanticStart
