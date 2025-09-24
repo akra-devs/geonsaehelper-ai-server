@@ -15,8 +15,6 @@ import org.springframework.web.server.ResponseStatusException
 
 @Service
 class AiEmbeddingService(
-    @Qualifier("ollamaEmbeddingModel")
-    private val ollamaEmbeddingModel: EmbeddingModel,
     @Qualifier("openAiEmbeddingModel")
     private val openAiEmbeddingModelProvider: ObjectProvider<EmbeddingModel>,
     private val aiProperties: AiProperties
@@ -26,17 +24,17 @@ class AiEmbeddingService(
             throw ResponseStatusException(HttpStatus.BAD_REQUEST, "inputs must not be empty")
         }
         // exception 던지지 말고 mapNotNull이나 filter처리
-        val normalizedInputs = request.inputs.mapIndexed { index, value ->
+        val normalizedInputs = request.inputs.mapNotNull { value ->
             val trimmed = value.trim()
-            if (trimmed.isEmpty()) {
-                throw ResponseStatusException(HttpStatus.BAD_REQUEST, "inputs[$index] must not be blank")
-            }
-            trimmed
+            trimmed.ifEmpty { null }
         }
 
-        val provider = request.provider ?: aiProperties.defaultProvider
-        val resolvedModel = resolveModel(provider, request.model)
-        val embeddingModel = resolveEmbeddingModel(provider)
+        val resolvedModel = resolveModel(request)
+        val embeddingModel = openAiEmbeddingModelProvider.getIfAvailable()
+            ?: throw ResponseStatusException(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "OpenAI embeddings are not configured. Provide spring.ai.openai.api-key"
+            )
 
         val optionsBuilder = EmbeddingOptionsBuilder.builder()
         optionsBuilder.withModel(resolvedModel.value)
@@ -50,47 +48,45 @@ class AiEmbeddingService(
             vectors = vectors,
             dimensions = dimensions,
             model = resolvedModel,
-            provider = provider
+            provider = AiProperties.Provider.OPENAI
         )
     }
 
-    private fun resolveModel(
-        provider: AiProperties.Provider,
-        requestedModel: AiEmbeddingModel?
-    ): AiEmbeddingModel {
-        val configuredModelId = when (provider) {
-            AiProperties.Provider.OLLAMA -> aiProperties.ollama.embeddingModel
-            AiProperties.Provider.OPENAI -> aiProperties.openai.embeddingModel
+    private fun resolveModel(request: AiEmbeddingRequest): AiEmbeddingModel {
+        val requestedModel = request.model
+
+        if (request.provider != null && request.provider != AiProperties.Provider.OPENAI) {
+            throw ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Only OpenAI embeddings are supported now"
+            )
         }
+
+        if (requestedModel != null && requestedModel.provider != AiProperties.Provider.OPENAI) {
+            throw ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Model ${requestedModel.value} is not supported. Use OpenAI embedding models."
+            )
+        }
+
+        val configuredModelId = aiProperties.openai.embeddingModel
 
         val configuredModel = configuredModelId?.let { modelId ->
             AiEmbeddingModel.fromModelName(modelId) ?: throw ResponseStatusException(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "Configured embedding model '$modelId' is not supported"
             )
-        } ?: when (provider) {
-            AiProperties.Provider.OLLAMA -> AiEmbeddingModel.EMBEDDINGGEMMA_300M
-            AiProperties.Provider.OPENAI -> AiEmbeddingModel.TEXT_EMBEDDING_3_SMALL
-        }
+        } ?: AiEmbeddingModel.TEXT_EMBEDDING_3_SMALL
 
-        if (requestedModel != null && requestedModel.provider != provider) {
+        val model = requestedModel ?: configuredModel
+
+        if (model.provider != AiProperties.Provider.OPENAI) {
             throw ResponseStatusException(
                 HttpStatus.BAD_REQUEST,
-                "Model ${requestedModel.name} cannot be used with provider $provider"
+                "Only OpenAI embedding models are supported"
             )
         }
 
-        return requestedModel ?: configuredModel
-    }
-
-    private fun resolveEmbeddingModel(provider: AiProperties.Provider): EmbeddingModel {
-        return when (provider) {
-            AiProperties.Provider.OLLAMA -> ollamaEmbeddingModel
-            AiProperties.Provider.OPENAI -> openAiEmbeddingModelProvider.getIfAvailable()
-                ?: throw ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "OpenAI embeddings are not configured. Enable spring.ai.openai and supply an API key."
-                )
-        }
+        return model
     }
 }

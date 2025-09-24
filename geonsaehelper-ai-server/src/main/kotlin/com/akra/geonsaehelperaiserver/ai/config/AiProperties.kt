@@ -13,7 +13,7 @@ data class ProviderSettings(
 @ConfigurationProperties(prefix = "app.ai")
 data class AiProperties(
     var defaultProvider: Provider = Provider.OLLAMA,
-    var defaultSystemPrompt: String = "You are a helpful study assistant.",
+    var defaultSystemPrompt: String = "당신은 HUG의 전세 관련 assistant 입니다",
     var ollama: ProviderSettings = ProviderSettings(model = "gemma3:12b", embeddingModel = "embeddinggemma:300m"),
     var openai: ProviderSettings = ProviderSettings(model = "gpt-5-mini", embeddingModel = "text-embedding-3-small")
 ) {

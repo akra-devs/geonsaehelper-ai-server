@@ -1,5 +1,7 @@
 package com.akra.geonsaehelperaiserver.chunk
 
+import com.akra.geonsaehelperaiserver.ai.config.AiProperties
+import com.akra.geonsaehelperaiserver.ai.model.AiEmbeddingModel
 import com.akra.geonsaehelperaiserver.ai.model.AiEmbeddingRequest
 import com.akra.geonsaehelperaiserver.ai.service.AiEmbeddingService
 import com.akra.geonsaehelperaiserver.vector.VectorDocumentPayload
@@ -28,8 +30,8 @@ class ChunkEmbeddingService(
         text: String,
         options: SemanticChunkService.SemanticChunkOptions
     ): ChunkEmbeddingResult {
-//        val chunkResponse = semanticChunkService.chunkText(text, options)
-        val chunkResponse = ChunkResponse(text.chunked(1000))
+        val chunkResponse = semanticChunkService.chunkText(text, options)
+//        val chunkResponse = ChunkResponse(text.chunked(1000))
         if (chunkResponse.content.isEmpty()) {
             return ChunkEmbeddingResult(
                 items = emptyList(),
@@ -41,7 +43,9 @@ class ChunkEmbeddingService(
 
         val embeddingResponse = aiEmbeddingService.embed(
             AiEmbeddingRequest(
-                inputs = chunkResponse.content
+                inputs = chunkResponse.content,
+                provider = AiProperties.Provider.OPENAI,
+                model = AiEmbeddingModel.EMBEDDINGGEMMA_300M,
             )
         )
 
