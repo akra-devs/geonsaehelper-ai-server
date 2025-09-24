@@ -2,8 +2,13 @@ package com.akra.geonsaehelperaiserver.ai.model
 
 import com.akra.geonsaehelperaiserver.ai.config.AiProperties
 
-enum class AiEmbeddingModel(val value: String) {
-    EMBEDDINGGEMMA_300M("embeddinggemma:300m");
+enum class AiEmbeddingModel(
+    val value: String,
+    val provider: AiProperties.Provider
+) {
+    EMBEDDINGGEMMA_300M("embeddinggemma:300m", AiProperties.Provider.OLLAMA),
+    TEXT_EMBEDDING_3_SMALL("text-embedding-3-small", AiProperties.Provider.OPENAI),
+    TEXT_EMBEDDING_3_LARGE("text-embedding-3-large", AiProperties.Provider.OPENAI);
 
     companion object {
         fun fromModelName(id: String): AiEmbeddingModel? = entries.firstOrNull { it.value == id }

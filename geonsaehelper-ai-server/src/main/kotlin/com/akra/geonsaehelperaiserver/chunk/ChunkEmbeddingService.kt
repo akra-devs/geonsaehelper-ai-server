@@ -1,7 +1,5 @@
 package com.akra.geonsaehelperaiserver.chunk
 
-import com.akra.geonsaehelperaiserver.ai.config.AiProperties
-import com.akra.geonsaehelperaiserver.ai.model.AiEmbeddingModel
 import com.akra.geonsaehelperaiserver.ai.model.AiEmbeddingRequest
 import com.akra.geonsaehelperaiserver.ai.service.AiEmbeddingService
 import com.akra.geonsaehelperaiserver.vector.VectorDocumentPayload
@@ -43,9 +41,7 @@ class ChunkEmbeddingService(
 
         val embeddingResponse = aiEmbeddingService.embed(
             AiEmbeddingRequest(
-                inputs = chunkResponse.content,
-                model = AiEmbeddingModel.EMBEDDINGGEMMA_300M,
-                provider = AiProperties.Provider.OLLAMA
+                inputs = chunkResponse.content
             )
         )
 

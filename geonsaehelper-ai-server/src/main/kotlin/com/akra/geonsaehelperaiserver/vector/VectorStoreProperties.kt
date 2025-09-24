@@ -4,5 +4,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 
 @ConfigurationProperties(prefix = "app.ai.vectorstore")
 data class VectorStoreProperties(
-    val defaultTopK: Int = 4
+    val defaultTopK: Int = 4,
+    val embeddingBean: String = "ollamaEmbeddingModel"
 )
