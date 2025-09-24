@@ -50,11 +50,11 @@ class SemanticChunkService(
         val semanticStart = System.currentTimeMillis()
 
         val results = mechanicalChunks.mapIndexed { blockIndex, block ->
-            val systemPrompt = buildSystemPrompt(options.roleInstructions)
+            val systemPrompt = buildSystemPrompt(options)
             val userPayload = mapOf(
-                "block_index" to blockIndex,
-                "chunk_size_hint" to options.chunkSizeHint,
-                "max_chunk_size" to options.maxChunkSize,
+//                "block_index" to blockIndex,
+//                "chunk_size_hint" to options.chunkSizeHint,
+//                "max_chunk_size" to options.maxChunkSize,
                 "text" to block
             )
             val userMessage = objectMapper.writeValueAsString(userPayload)
@@ -86,32 +86,43 @@ class SemanticChunkService(
         return ChunkResponse(content = results.flatMap { it.content })
     }
 
-    private fun buildSystemPrompt(roleInstructions: String?): String {
-        val basePrompt = """
-            당신은 긴 텍스트를 의미 단위로 분할하는 전문 어시스턴트입니다.
-            입력 블록은 기계적 분할 과정에서 일정한 overlap을 두고 잘린 결과이므로, 시작과 끝에 미완성 문장이나 중복된 문장이 포함될 수 있습니다.
-            아래 절차를 순서대로 수행하세요.
-            1. 블록 전체를 읽고 제목, 문단, 목록, 표 등 의미 경계를 식별합니다.
-            2. 앞부분에서 overlap으로 인해 이미 전달된 문장·문단·제목이 보이면 삭제하고, 문장이 자연스럽게 시작되는 지점부터 작성하세요. 겹친 구절이 문장 중간에서 시작한다면 해당 문장을 통째로 제거하고 다음 완전한 문장부터 시작합니다.
-            3. 자연스러운 의미 단위(문단, 문장 그룹, 목록 항목 등)를 기준으로 청크를 나눕니다. 문장을 중간에서 자르거나 의미를 끊지 말고, 한 청크 안에 하나의 주제나 논리를 온전히 담으세요.
-            4. 각 청크는 벡터 임베딩에 적합하도록 충분한 맥락을 포함해야 합니다. 제목만 분리하지 말고, 제목과 그에 대응하는 설명·목록을 함께 묶으세요. 2문장 미만이거나 200자 미만처럼 매우 짧은 내용은 다음 문단과 결합해 더 큰 의미 단위로 만드세요.
-            5. 블록의 끝에서도 overlap으로 이어질 미완성 문장이나 dangling 구절이 있으면 제거합니다. 다음 블록이 이어받을 수 있도록 완전한 문장에서 청크를 마무리하고, 필요하면 마지막 문장을 통째로 제외하세요.
-            6. 완성된 청크들을 순서대로 하나의 JSON 배열에 담아 출력합니다. 배열 외의 텍스트, 설명, 주석은 절대 추가하지 마세요.
-
-            추가 지침:
-            - 입력에 존재하지 않는 문장이나 표현을 절대 새로 만들지 마세요.
-            - 목록과 표는 관련 항목을 가능한 한 같은 청크에 담아 의미 단위가 깨지지 않도록 하세요. 표의 헤더와 데이터 행, 목록의 제목과 항목이 분리되지 않게 하세요.
-            - 동일하거나 거의 같은 문장이 두 청크에 반복되지 않도록 주의하세요.
-            - chunk_size_hint를 참고하되 의미 단절을 피하기 위해 약간 조정할 수 있습니다. max_chunk_size는 절대 초과하지 마세요.
-
-            겹침 제거 예시:
-            이전 청크가 "…계속 진행되었습니다."로 끝나고 이번 블록이 같은 문장으로 시작하면, 해당 문장 전체를 삭제한 뒤 다음 완전한 문장부터 청크를 작성하세요. 블록 끝이 "…를 참고하기"처럼 미완성이라면 그 문장을 제외하고 종료하세요.
+    private fun buildSystemPrompt(options: SemanticChunkOptions): String {
+//        val basePrompt = """
+//            당신은 잘라진 텍스트 일부를 다시 의미 단위(임베딩 단위로써 벡터 DB에 의미있는 Chunk)로 chunk합니다. 입력 블록은 기계적 분할 이후 overlap이 남아 있어 앞뒤에 중복되거나 잘린 문장이 포함될 수 있습니다.
+//            아래 지침을 그대로 따르세요.
+//            0. 반드시 제공된 Chunk 단위를 준수하도록 하세요.
+//            1. 블록을 빠르게 읽고 제목, 문단, 목록, 표 등 주요 주제를 파악합니다.
+//            2. 블록의 앞·뒤에서 이전 Chunk와 겹칠 부분을 삭제합니다. 문장이 중간에서 시작되면 그 문장을 통째로 버리고 다음 완전한 문장부터, 끝부분도 동일하게 정리하세요.
+//            3. 주제 단위로 Chunk를 만듭니다. 제목이나 소제목은 반드시 해당 설명·목록·표와 함께 같은 Chunk에 포함하세요. 목록 항목은 가능한 한 함께 유지하되 너무 길면 의미가 분리되는 지점에서만 나누세요.
+//            4. 각 Chunk는 벡터 임베딩에 충분한 문맥을 제공해야 합니다. 세 문장 이상 또는 약 250자 이상이 되도록 인접 문단을 합치고, 너무 짧은 내용은 다음 문단과 결합하세요. chunk_size_hint를 참고하되 max_chunk_size는 절대 초과하지 마세요.
+//            5. 완성된 Chunk들을 순서대로 하나의 JSON 배열에 담아 출력합니다. 배열 외 텍스트나 설명은 추가하지 마세요.
+//
+//            추가 지침:
+//            - 입력에 없는 문장을 새로 만들지 마세요.
+//            - 동일하거나 거의 같은 문장을 두 Chunk에 반복하지 마세요.
+//            - 표는 헤더와 관련 행이 분리되지 않도록, 목록은 제목과 항목을 함께 두세요.
+//
+//            겹침 정리 예시:
+//            이전 Chunk가 "…계속 진행되었습니다."로 끝나고 이번 블록이 같은 문장으로 시작하면 그 문장은 삭제하고 다음 완전한 문장부터 작성하세요. 블록 끝이 "…을 참고하"처럼 미완성이라면 그 문장을 제외하세요.
+//        """.trimIndent()
+        val basePrompt  = """
+              당신은 겹침(overlap)이 남아 있는 텍스트 블록을 의미 단위 Chunk로 재구성하는 어시스턴트입니다.                                                                                                                      
+              아래 규칙을 반드시 지키세요.                                                                                                                                                                                       
+              1. 입력 블록을 읽어 제목·소제목·문단·목록·표 등 자연스러운 토픽 경계를 파악합니다.                                                                                                                                 
+              2. 블록 앞뒤에서 이전/다음 Chunk와 겹칠 가능성이 있는 문장을 제거합니다. 문장이 중간에서 시작되면 그 문장 전체를 버리고 다음 완전한 문장부터 사용합니다. 끝부분도 동일하게 정리합니다.                             
+              3. Chunk는 토픽 단위로 만듭니다. 제목(또는 소제목)은 반드시 해당 설명, 목록, 표와 같은 Chunk에 묶고, 목록 항목들은 가능한 한 함께 유지합니다.                                                                      
+              4. Chunk마다 충분한 문맥을 포함해야 합니다. chunk_size_hint 수준으로 내용을 합치되 max_chunk_size는 넘기지 마세요. 아주 짧은 문단·목록·문장은 바로 뒤 내용과 결합해 하나의 덩어리를 만듭니다.                      
+              5. 입력 문장을 그대로 사용하고 새로운 내용을 만들지 마세요. 동일하거나 거의 같은 문장이 두 Chunk에 반복되지 않도록 주의하세요.                                                                                     
+              6. 결과는 JSON 배열 하나만 출력합니다. 배열 요소는 문자열 Chunk이며, 배열 밖에는 어떠한 텍스트도 포함하지 않습니다.         
         """.trimIndent()
+        val sizeNotes = "\n하나의 Chunk 단위는=${options.chunkSizeHint}, 최대 Chunk 단위는=${options.maxChunkSize}을 반드시 준수 해주세요."
 
-        return if (roleInstructions.isNullOrBlank()) {
-            basePrompt
+        val promptWithSizes = basePrompt + sizeNotes
+
+        return if (options.roleInstructions.isNullOrBlank()) {
+            promptWithSizes
         } else {
-            basePrompt + "\n추가 역할 지침: ${roleInstructions.trim()}"
+            promptWithSizes + "\n추가 역할 지침: ${options.roleInstructions.trim()}"
         }
     }
 }

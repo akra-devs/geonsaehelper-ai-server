@@ -11,7 +11,6 @@ Content-Type: text/markdown
 --WebAppBoundary
 Content-Disposition: form-data; name="roleInstructions"
 
-필요시 추가 역할 지침을 여기에 작성
 --WebAppBoundary
 Content-Disposition: form-data; name="chunkSizeHint"
 
