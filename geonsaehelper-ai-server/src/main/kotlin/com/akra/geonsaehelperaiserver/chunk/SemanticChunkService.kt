@@ -1,6 +1,5 @@
 package com.akra.geonsaehelperaiserver.chunk
 
-import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.messages.SystemMessage
@@ -25,8 +24,6 @@ class SemanticChunkService(
         val mechanicalOverlap: Int = 300
     )
 
-    private val chunkListType = object : TypeReference<List<String>>() {}
-
     fun chunkText(text: String, options: SemanticChunkOptions = SemanticChunkOptions()): ChunkResponse {
         val startMillis = System.currentTimeMillis()
         val normalized = MarkdownNormalizer.normalize(text)
@@ -45,8 +42,6 @@ class SemanticChunkService(
         )
         val afterMechanical = System.currentTimeMillis()
         println("[SemanticChunkService] mechanical chunking took ${afterMechanical - afterNormalize} ms (chunks=${mechanicalChunks.size})")
-
-        val semanticChunks = mutableListOf<String>()
         val semanticStart = System.currentTimeMillis()
 
         val results = mechanicalChunks.mapIndexed { blockIndex, block ->
@@ -66,11 +61,11 @@ class SemanticChunkService(
                 )
             )
 
-            val tempOption = OllamaOptions.builder().numCtx(2048).build()
+            val option = OllamaOptions.builder().numCtx(2048).build()
             val spec = ChatClient
                 .create(chatModel)
                 .prompt(prompt)
-                .options(tempOption)
+                .options(option)
 
             val response = retry(times = 3) {
                 val aiResponse = spec.call()
@@ -82,7 +77,7 @@ class SemanticChunkService(
         }
 
         val semanticDuration = System.currentTimeMillis() - semanticStart
-        println("[SemanticChunkService] semantic chunking took ${semanticDuration} ms (blocks=${mechanicalChunks.size}, chunks=${semanticChunks.size})")
+        println("[SemanticChunkService] semantic chunking took ${semanticDuration} ms (blocks=${mechanicalChunks.size}")
         return ChunkResponse(content = results.flatMap { it.content })
     }
 
