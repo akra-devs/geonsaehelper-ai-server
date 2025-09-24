@@ -88,7 +88,7 @@ POST http://localhost:8080/api/chunks/semantic/search
 Content-Type: application/json
 
 {
-  "query": "임대차 계약 갱신은 몇개월 이내 어떤 조건인가요?"
+  "query": "전화번호"
 }
 ###
 POST http://localhost:6333/collections/geonsaehelper_embeddings/points/scroll

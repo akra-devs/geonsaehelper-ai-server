@@ -30,8 +30,8 @@ class ChunkEmbeddingService(
         text: String,
         options: SemanticChunkService.SemanticChunkOptions
     ): ChunkEmbeddingResult {
-        val chunkResponse = semanticChunkService.chunkText(text, options)
-//        val chunkResponse = ChunkResponse(text.chunked(1000))
+//        val chunkResponse = semanticChunkService.chunkText(text, options)
+        val chunkResponse = ChunkResponse(text.chunked(1000))
         if (chunkResponse.content.isEmpty()) {
             return ChunkEmbeddingResult(
                 items = emptyList(),
@@ -45,7 +45,7 @@ class ChunkEmbeddingService(
             AiEmbeddingRequest(
                 inputs = chunkResponse.content,
                 provider = AiProperties.Provider.OPENAI,
-                model = AiEmbeddingModel.EMBEDDINGGEMMA_300M,
+                model = AiEmbeddingModel.TEXT_EMBEDDING_3_SMALL,
             )
         )
 
