@@ -1,5 +1,5 @@
 ### Semantic chunking request example
-# @timeout 600
+# @timeout 6000
 POST 127.0.0.1:8080/api/chunks/semantic
 Content-Type: multipart/form-data; boundary=WebAppBoundary
 

@@ -72,7 +72,10 @@ class SemanticChunkService(
                 .prompt(prompt)
                 .options(tempOption)
 
-            val response = spec.call().entity(ChunkResponse::class.java) ?: ChunkResponse(emptyList())
+            val response = retry(times = 3) {
+                val aiResponse = spec.call()
+                aiResponse.entity(ChunkResponse::class.java) ?: ChunkResponse(emptyList())
+            }
 
             println("semanticChunks : $blockIndex 완료")
             response
@@ -105,3 +108,21 @@ class SemanticChunkService(
 data class ChunkResponse(
     val content: List<String>,
 )
+
+private fun <T> retry(times: Int = 3, block: () -> T): T {
+    require(times > 0) { "times must be greater than 0" }
+
+    var lastError: Throwable? = null
+    repeat(times) { attempt ->
+        try {
+            return block()
+        } catch (ex: Throwable) {
+            lastError = ex
+            if (attempt < times - 1) {
+                println("[SemanticChunkService] attempt ${attempt + 1} failed: ${ex.message}. Retrying...")
+            }
+        }
+    }
+
+    throw lastError ?: IllegalStateException("Retry failed but no exception captured.")
+}
