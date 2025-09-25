@@ -1,6 +1,7 @@
 package com.akra.geonsaehelperaiserver.chunk
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import org.slf4j.LoggerFactory
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.messages.SystemMessage
 import org.springframework.ai.chat.messages.UserMessage
@@ -17,6 +18,11 @@ class SemanticChunkService(
     private val objectMapper: ObjectMapper
 ) {
 
+    companion object {
+        private val logger = LoggerFactory.getLogger(SemanticChunkService::class.java)
+        private const val DEFAULT_NUM_CTX = 2048
+    }
+
     data class SemanticChunkOptions(
         val roleInstructions: String? = null,
         val chunkSizeHint: Int = 900,
@@ -25,27 +31,33 @@ class SemanticChunkService(
     )
 
     fun chunkText(text: String, options: SemanticChunkOptions = SemanticChunkOptions()): ChunkResponse {
-        val startMillis = System.currentTimeMillis()
+        val normalizationStart = System.currentTimeMillis()
         val normalized = MarkdownNormalizer.normalize(text)
-        val afterNormalize = System.currentTimeMillis()
-        println("[SemanticChunkService] normalization took ${afterNormalize - startMillis} ms")
+        val normalizationDuration = System.currentTimeMillis() - normalizationStart
+        logger.debug("[SemanticChunkService] normalization took {} ms", normalizationDuration)
+
         if (normalized.isEmpty()) {
-            println("[SemanticChunkService] mechanical chunking skipped (empty input)")
-            println("[SemanticChunkService] semantic chunking skipped (empty input)")
+            logger.debug("[SemanticChunkService] skipping chunking for empty input")
             return ChunkResponse(emptyList())
         }
 
+        val mechanicalStart = System.currentTimeMillis()
         val mechanicalChunks = OverlappingTextChunker.chunk(
             normalized,
             chunkSize = options.maxChunkSize,
             overlap = options.mechanicalOverlap
         )
-        val afterMechanical = System.currentTimeMillis()
-        println("[SemanticChunkService] mechanical chunking took ${afterMechanical - afterNormalize} ms (chunks=${mechanicalChunks.size})")
+        val mechanicalDuration = System.currentTimeMillis() - mechanicalStart
+        logger.debug(
+            "[SemanticChunkService] mechanical chunking took {} ms (chunks={})",
+            mechanicalDuration,
+            mechanicalChunks.size
+        )
+
+        val systemPrompt = buildSystemPrompt(options)
         val semanticStart = System.currentTimeMillis()
 
         val results = mechanicalChunks.mapIndexed { blockIndex, block ->
-            val systemPrompt = buildSystemPrompt(options)
             val userPayload = mapOf(
                 "block_index" to blockIndex,
                 "chunk_size_hint" to options.chunkSizeHint,
@@ -61,24 +73,58 @@ class SemanticChunkService(
                 )
             )
 
-            val option = OllamaOptions.builder().numCtx(2048).build()
             val spec = ChatClient
                 .create(chatModel)
                 .prompt(prompt)
-                .options(option)
+                .options(ollamaOptions())
 
             val response = retry(times = 3) {
                 val aiResponse = spec.call()
                 aiResponse.entity(ChunkResponse::class.java) ?: ChunkResponse(emptyList())
             }
 
-            println("semanticChunks : $blockIndex 완료")
+            logger.debug(
+                "[SemanticChunkService] semantic chunk {} completed (chunk_count={})",
+                blockIndex,
+                response.content.size
+            )
+
             response
         }
 
         val semanticDuration = System.currentTimeMillis() - semanticStart
-        println("[SemanticChunkService] semantic chunking took ${semanticDuration} ms (blocks=${mechanicalChunks.size}")
-        return ChunkResponse(content = results.flatMap { it.content })
+        logger.debug(
+            "[SemanticChunkService] semantic chunking took {} ms (blocks={})",
+            semanticDuration,
+            mechanicalChunks.size
+        )
+
+        return ChunkResponse(results.flatMap { it.content })
+    }
+
+    private fun ollamaOptions(): OllamaOptions =
+        OllamaOptions.builder().numCtx(DEFAULT_NUM_CTX).build()
+
+    private fun <T> retry(times: Int = 3, block: () -> T): T {
+        require(times > 0) { "times must be greater than 0" }
+
+        var lastError: Throwable? = null
+        repeat(times) { attempt ->
+            try {
+                return block()
+            } catch (ex: Throwable) {
+                lastError = ex
+                if (attempt < times - 1) {
+                    logger.warn(
+                        "[SemanticChunkService] attempt {} failed: {}. Retrying...",
+                        attempt + 1,
+                        ex.message
+                    )
+                }
+            }
+        }
+
+        throw lastError ?: IllegalStateException("Retry failed but no exception captured.")
     }
 
     private fun buildSystemPrompt(options: SemanticChunkOptions): String {
@@ -115,26 +161,4 @@ class SemanticChunkService(
             promptWithSizes + "\n추가 역할 지침: ${options.roleInstructions.trim()}"
         }
     }
-}
-
-data class ChunkResponse(
-    val content: List<String>,
-)
-
-private fun <T> retry(times: Int = 3, block: () -> T): T {
-    require(times > 0) { "times must be greater than 0" }
-
-    var lastError: Throwable? = null
-    repeat(times) { attempt ->
-        try {
-            return block()
-        } catch (ex: Throwable) {
-            lastError = ex
-            if (attempt < times - 1) {
-                println("[SemanticChunkService] attempt ${attempt + 1} failed: ${ex.message}. Retrying...")
-            }
-        }
-    }
-
-    throw lastError ?: IllegalStateException("Retry failed but no exception captured.")
 }

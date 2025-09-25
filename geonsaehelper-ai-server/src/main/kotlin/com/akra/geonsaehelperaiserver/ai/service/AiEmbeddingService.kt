@@ -19,37 +19,50 @@ class AiEmbeddingService(
     private val openAiEmbeddingModelProvider: ObjectProvider<EmbeddingModel>,
     private val aiProperties: AiProperties
 ) {
+
     fun embed(request: AiEmbeddingRequest): AiEmbeddingResponse {
         if (request.inputs.isEmpty()) {
             throw ResponseStatusException(HttpStatus.BAD_REQUEST, "inputs must not be empty")
         }
-        // exception 던지지 말고 mapNotNull이나 filter처리
-        val normalizedInputs = request.inputs.mapNotNull { value ->
-            val trimmed = value.trim()
-            trimmed.ifEmpty { null }
-        }
 
-        val resolvedModel = resolveModel(request)
-        val embeddingModel = openAiEmbeddingModelProvider.getIfAvailable()
-            ?: throw ResponseStatusException(
-                HttpStatus.SERVICE_UNAVAILABLE,
-                "OpenAI embeddings are not configured. Provide spring.ai.openai.api-key"
-            )
-
-        val optionsBuilder = EmbeddingOptionsBuilder.builder()
-        optionsBuilder.withModel(resolvedModel.value)
-        val embeddingRequest = EmbeddingRequest(normalizedInputs, optionsBuilder.build())
+        val normalizedInputs = normalizeInputs(request.inputs)
+        val model = resolveModel(request)
+        val embeddingModel = resolveEmbeddingModel()
+        val embeddingRequest = buildEmbeddingRequest(normalizedInputs, model)
 
         val embeddingResponse = embeddingModel.call(embeddingRequest)
-        val vectors = embeddingResponse.results.map { embedding -> embedding.output.toList() }
+        val vectors = embeddingResponse.results.map { it.output.toList() }
         val dimensions = vectors.firstOrNull()?.size ?: 0
 
         return AiEmbeddingResponse(
             vectors = vectors,
             dimensions = dimensions,
-            model = resolvedModel,
+            model = model,
             provider = AiProperties.Provider.OPENAI
         )
+    }
+
+    private fun normalizeInputs(inputs: List<String>): List<String> =
+        inputs.mapNotNull { value ->
+            val trimmed = value.trim()
+            trimmed.ifEmpty { null }
+        }
+
+    private fun resolveEmbeddingModel(): EmbeddingModel =
+        openAiEmbeddingModelProvider.getIfAvailable()
+            ?: throw ResponseStatusException(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "OpenAI embeddings are not configured. Provide spring.ai.openai.api-key"
+            )
+
+    private fun buildEmbeddingRequest(
+        inputs: List<String>,
+        model: AiEmbeddingModel
+    ): EmbeddingRequest {
+        val options = EmbeddingOptionsBuilder.builder()
+            .withModel(model.value)
+            .build()
+        return EmbeddingRequest(inputs, options)
     }
 
     private fun resolveModel(request: AiEmbeddingRequest): AiEmbeddingModel {
@@ -69,15 +82,7 @@ class AiEmbeddingService(
             )
         }
 
-        val configuredModelId = aiProperties.openai.embeddingModel
-
-        val configuredModel = configuredModelId?.let { modelId ->
-            AiEmbeddingModel.fromModelName(modelId) ?: throw ResponseStatusException(
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                "Configured embedding model '$modelId' is not supported"
-            )
-        } ?: AiEmbeddingModel.TEXT_EMBEDDING_3_SMALL
-
+        val configuredModel = configuredModel()
         val model = requestedModel ?: configuredModel
 
         if (model.provider != AiProperties.Provider.OPENAI) {
@@ -88,5 +93,16 @@ class AiEmbeddingService(
         }
 
         return model
+    }
+
+    private fun configuredModel(): AiEmbeddingModel {
+        val configuredModelId = aiProperties.openai.embeddingModel
+
+        return configuredModelId?.let { modelId ->
+            AiEmbeddingModel.fromModelName(modelId) ?: throw ResponseStatusException(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "Configured embedding model '$modelId' is not supported"
+            )
+        } ?: AiEmbeddingModel.TEXT_EMBEDDING_3_SMALL
     }
 }

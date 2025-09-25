@@ -9,8 +9,13 @@ object SemanticChunkResponseParser {
             return trimmed
         }
 
-        if (trimmed.startsWith("```")) {
-            val withoutFence = trimmed.removePrefix("```")
+        val normalized = trimmed
+            .replace("\\r\\n", "\n")
+            .replace("\\n", "\n")
+            .replace("\\\"", "\"")
+
+        if (normalized.startsWith("```")) {
+            val withoutFence = normalized.removePrefix("```")
             val closingIndex = withoutFence.lastIndexOf("```")
             val inner = if (closingIndex >= 0) {
                 withoutFence.substring(0, closingIndex)
@@ -21,27 +26,32 @@ object SemanticChunkResponseParser {
             return removeLanguageHint(inner).trim()
         }
 
-        if (trimmed.startsWith("`") && trimmed.endsWith("`") && trimmed.length > 2) {
-            return trimmed.substring(1, trimmed.length - 1).trim()
+        if (normalized.startsWith("`") && normalized.endsWith("`") && normalized.length > 2) {
+            return normalized.substring(1, normalized.length - 1).trim()
         }
 
-        return trimmed
+        return normalized
     }
 
     private fun removeLanguageHint(content: String): String {
-        val trimmed = content.trimStart()
-        val firstNewline = trimmed.indexOf('\n')
-        if (firstNewline == -1) {
-            return trimmed
+        val lines = content.lineSequence().toList()
+        if (lines.isEmpty()) {
+            return content.trim()
         }
 
-        val firstLine = trimmed.substring(0, firstNewline).trim()
-        val remainder = trimmed.substring(firstNewline + 1)
-
-        return if (languageHints.any { it.equals(firstLine, ignoreCase = true) }) {
-            remainder.trim()
-        } else {
-            trimmed
+        val firstNonBlankIndex = lines.indexOfFirst { it.isNotBlank() }
+        if (firstNonBlankIndex == -1) {
+            return ""
         }
+
+        val firstLine = lines[firstNonBlankIndex].trim()
+        if (languageHints.any { it.equals(firstLine, ignoreCase = true) }) {
+            return lines
+                .drop(firstNonBlankIndex + 1)
+                .joinToString(separator = "\n")
+                .trim()
+        }
+
+        return content.trim()
     }
 }
