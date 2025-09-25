@@ -1,5 +1,10 @@
 package com.akra.geonsaehelperaiserver.vector
 
+import com.akra.geonsaehelperaiserver.ai.config.AiProperties
+import com.akra.geonsaehelperaiserver.ai.model.AiEmbeddingModel
+import com.akra.geonsaehelperaiserver.ai.model.AiEmbeddingRequest
+import com.akra.geonsaehelperaiserver.ai.model.AiEmbeddingResponse
+import com.akra.geonsaehelperaiserver.ai.service.AiEmbeddingService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -7,6 +12,7 @@ import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
 import org.mockito.Mockito.verify
+import org.mockito.stubbing.Answer
 import org.springframework.ai.document.Document
 import org.springframework.ai.vectorstore.SearchRequest
 import org.springframework.ai.vectorstore.VectorStore
@@ -14,12 +20,32 @@ import org.springframework.ai.vectorstore.VectorStore
 class VectorStoreServiceTest {
 
     private val vectorStore: VectorStore = Mockito.mock(VectorStore::class.java)
+    private val aiEmbeddingService: AiEmbeddingService = Mockito.mock(
+        AiEmbeddingService::class.java,
+        Answer { invocation ->
+            when (invocation.method.name) {
+                "embed" -> AiEmbeddingResponse(
+                    vectors = listOf(listOf(1.0f, 0.5f, -0.2f)),
+                    dimensions = 3,
+                    model = AiEmbeddingModel.TEXT_EMBEDDING_3_SMALL,
+                    provider = AiProperties.Provider.OPENAI
+                ).also {
+                    lastEmbedRequest = invocation.getArgument(0) as AiEmbeddingRequest
+                }
+
+                else -> Mockito.RETURNS_DEFAULTS.answer(invocation)
+            }
+        }
+    )
     private val properties = VectorStoreProperties(defaultTopK = 3)
-    private val service = VectorStoreService(vectorStore, properties)
+    private val service = VectorStoreService(vectorStore, properties, aiEmbeddingService)
+    private var lastEmbedRequest: AiEmbeddingRequest? = null
 
     @BeforeEach
     fun resetMocks() {
         Mockito.reset(vectorStore)
+        Mockito.clearInvocations(aiEmbeddingService)
+        lastEmbedRequest = null
     }
 
     @Test
@@ -62,11 +88,11 @@ class VectorStoreServiceTest {
     @Test
     fun `search maps documents and uses default topK`() {
         val storedDocument = Document("doc-1", "hello world", mutableMapOf<String, Any>("source" to "test"))
-        Mockito.`when`(
-            vectorStore.similaritySearch(ArgumentMatchers.any(SearchRequest::class.java))
-        ).thenReturn(listOf(storedDocument))
+        Mockito.doReturn(listOf(storedDocument))
+            .`when`(vectorStore)
+            .similaritySearch(ArgumentMatchers.any(SearchRequest::class.java))
 
-        val response = service.search(VectorSearchRequest(query = "hello", topK = null))
+        val response = service.search(VectorSearchRequest(query = VectorQuery.Text("hello"), topK = null))
 
         assertThat(response.documents).hasSize(1)
         val result = response.documents.first()
@@ -79,5 +105,26 @@ class VectorStoreServiceTest {
         verify(vectorStore).similaritySearch(searchCaptor.capture())
         assertThat(searchCaptor.value.topK).isEqualTo(3)
         assertThat(searchCaptor.value.query).isEqualTo("hello")
+
+        assertThat(lastEmbedRequest).isNotNull
+        assertThat(lastEmbedRequest?.inputs).containsExactly("hello")
+    }
+
+    @Test
+    fun `search uses provided vector without embedding`() {
+        val storedDocument = Document("doc-2", "vector doc", mutableMapOf<String, Any>())
+        Mockito.doReturn(listOf(storedDocument))
+            .`when`(vectorStore)
+            .similaritySearch(ArgumentMatchers.any(SearchRequest::class.java))
+
+        val response = service.search(
+            VectorSearchRequest(
+                query = VectorQuery.Vector(values = listOf(0.1f, 0.2f, 0.3f)),
+                topK = 1
+            )
+        )
+
+        assertThat(response.documents).isEmpty()
+        assertThat(lastEmbedRequest).isNull()
     }
 }

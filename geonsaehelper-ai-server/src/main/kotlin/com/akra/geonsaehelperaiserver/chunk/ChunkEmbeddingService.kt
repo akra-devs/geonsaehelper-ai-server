@@ -69,10 +69,10 @@ class ChunkEmbeddingService(
         }
 
         // TODO: 의미 청킹 안정화 후 주석 해제 및 fallback 제거 예정입니다.
-        // val semanticChunks = semanticChunkService.chunkText(text, options)
-        // if (semanticChunks.content.isNotEmpty()) {
-        //     return semanticChunks
-        // }
+         val semanticChunks = semanticChunkService.chunkText(text, options)
+         if (semanticChunks.content.isNotEmpty()) {
+             return semanticChunks
+         }
 
         logger.debug("[ChunkEmbeddingService] Using mechanical chunk fallback")
         return ChunkResponse(text.chunked(DEFAULT_CHUNK_SIZE))

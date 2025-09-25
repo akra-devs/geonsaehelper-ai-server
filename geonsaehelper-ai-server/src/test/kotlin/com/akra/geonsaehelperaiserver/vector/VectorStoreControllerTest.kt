@@ -49,7 +49,7 @@ class VectorStoreControllerTest {
 
     @Test
     fun `search returns response from service`() {
-        val request = VectorSearchRequest(query = "hello", topK = 2)
+        val request = VectorSearchRequest(query = VectorQuery.Text("hello"), topK = 2)
         val response = VectorSearchResponse(
             documents = listOf(
                 VectorDocumentResponse(

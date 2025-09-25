@@ -1,5 +1,6 @@
 package com.akra.geonsaehelperaiserver.chunk
 
+import com.akra.geonsaehelperaiserver.vector.VectorQuery
 import com.akra.geonsaehelperaiserver.vector.VectorSearchRequest
 import com.akra.geonsaehelperaiserver.vector.VectorStoreService
 import org.springframework.http.HttpStatus
@@ -16,7 +17,7 @@ class ChunkEmbeddingQueryController(
 ) {
 
     data class QueryRequest(
-        val query: String,
+        val query: VectorQuery,
         val topK: Int? = null
     )
 
@@ -33,9 +34,7 @@ class ChunkEmbeddingQueryController(
 
     @PostMapping("/search")
     fun search(@RequestBody request: QueryRequest): QueryResponse {
-        if (request.query.isBlank()) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "query must not be blank")
-        }
+        validateQuery(request.query)
 
         val response = vectorStoreService.search(
             VectorSearchRequest(
@@ -54,5 +53,21 @@ class ChunkEmbeddingQueryController(
         }
 
         return QueryResponse(matches)
+    }
+
+    private fun validateQuery(query: VectorQuery) {
+        when (query) {
+            is VectorQuery.Text -> {
+                if (query.text.isBlank()) {
+                    throw ResponseStatusException(HttpStatus.BAD_REQUEST, "query must not be blank")
+                }
+            }
+
+            is VectorQuery.Vector -> {
+                if (query.values.isEmpty()) {
+                    throw ResponseStatusException(HttpStatus.BAD_REQUEST, "vector must not be empty")
+                }
+            }
+        }
     }
 }

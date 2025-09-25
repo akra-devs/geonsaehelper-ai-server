@@ -88,7 +88,10 @@ POST http://localhost:8080/api/chunks/semantic/search
 Content-Type: application/json
 
 {
-  "query": "전화번호"
+  "query": {
+    "type": "text",
+    "text": "전화번호"
+  }
 }
 ###
 POST http://localhost:6333/collections/geonsaehelper_embeddings/points/scroll

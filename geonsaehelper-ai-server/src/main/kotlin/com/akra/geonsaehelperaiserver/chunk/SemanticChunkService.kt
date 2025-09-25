@@ -13,7 +13,8 @@ import org.springframework.stereotype.Service
 
 @Service
 class SemanticChunkService(
-    @Qualifier("ollamaChatModel")
+//    @Qualifier("ollamaChatModel")
+    @Qualifier("openAiChatModel")
     private val chatModel: ChatModel,
     private val objectMapper: ObjectMapper
 ) {
