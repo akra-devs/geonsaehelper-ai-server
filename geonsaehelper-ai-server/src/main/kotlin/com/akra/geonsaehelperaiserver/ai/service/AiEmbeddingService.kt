@@ -96,7 +96,7 @@ class AiEmbeddingService(
     }
 
     private fun configuredModel(): AiEmbeddingModel {
-        val configuredModelId = aiProperties.openai.embeddingModel
+        val configuredModelId = aiProperties.settings(AiProperties.Provider.OPENAI).embeddingModel
 
         return configuredModelId?.let { modelId ->
             AiEmbeddingModel.fromModelName(modelId) ?: throw ResponseStatusException(

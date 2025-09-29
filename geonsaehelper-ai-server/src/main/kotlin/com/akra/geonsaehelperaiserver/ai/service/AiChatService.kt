@@ -29,10 +29,11 @@ class AiChatService(
         val systemPrompt = resolveSystemPrompt(request.systemPrompt)
         val prompt = buildPrompt(systemPrompt, userMessage)
         val content = callChatModel(prompt)
+        val model = resolveModel(provider)
 
         return AiChatResponse(
             content = content,
-            model = aiProperties.ollama.model,
+            model = model,
             provider = provider
         )
     }
@@ -46,6 +47,17 @@ class AiChatService(
             )
         }
         return provider
+    }
+
+    private fun resolveModel(provider: AiProperties.Provider): String {
+        val configuredModel = aiProperties.settings(provider).model
+        if (configuredModel.isBlank()) {
+            throw ResponseStatusException(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "Model for provider $provider is not configured"
+            )
+        }
+        return configuredModel
     }
 
     private fun resolveSystemPrompt(customPrompt: String?): String {

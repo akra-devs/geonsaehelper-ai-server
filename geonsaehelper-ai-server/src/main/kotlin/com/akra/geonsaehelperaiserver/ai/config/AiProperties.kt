@@ -14,11 +14,17 @@ data class ProviderSettings(
 data class AiProperties(
     var defaultProvider: Provider = Provider.OLLAMA,
     var defaultSystemPrompt: String = "당신은 HUG의 전세 관련 assistant 입니다",
-    var ollama: ProviderSettings = ProviderSettings(model = "gemma3:12b", embeddingModel = "embeddinggemma:300m"),
-    var openai: ProviderSettings = ProviderSettings(model = "gpt-5-mini", embeddingModel = "text-embedding-3-small")
+    var ollama: ProviderSettings = ProviderSettings(),
+    var openai: ProviderSettings = ProviderSettings()
 ) {
     enum class Provider {
         OLLAMA,
         OPENAI
     }
+
+    fun settings(provider: Provider): ProviderSettings =
+        when (provider) {
+            Provider.OLLAMA -> ollama
+            Provider.OPENAI -> openai
+        }
 }
