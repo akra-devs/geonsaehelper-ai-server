@@ -30,13 +30,22 @@ object ChunkUploadRequestSupport {
         chunkSizeHint: Int?,
         maxChunkSize: Int?,
         mechanicalOverlap: Int?
-    ): SemanticChunkService.SemanticChunkOptions {
-        val defaults = SemanticChunkService.SemanticChunkOptions()
-        return defaults.copy(
-            roleInstructions = roleInstructions ?: defaults.roleInstructions,
-            chunkSizeHint = chunkSizeHint ?: defaults.chunkSizeHint,
-            maxChunkSize = maxChunkSize ?: defaults.maxChunkSize,
-            mechanicalOverlap = mechanicalOverlap ?: defaults.mechanicalOverlap
+    ): ChunkPipelineOptions {
+        val defaults = ChunkPipelineOptions()
+        val resolvedMaxChunkSize = maxChunkSize ?: defaults.semantic.maxChunkSize
+        val mechanicalOptions = defaults.mechanical.copy(
+            chunkSize = resolvedMaxChunkSize,
+            overlap = mechanicalOverlap ?: defaults.mechanical.overlap
+        )
+        val semanticOptions = defaults.semantic.copy(
+            roleInstructions = roleInstructions ?: defaults.semantic.roleInstructions,
+            chunkSizeHint = chunkSizeHint ?: defaults.semantic.chunkSizeHint,
+            maxChunkSize = resolvedMaxChunkSize
+        )
+
+        return ChunkPipelineOptions(
+            mechanical = mechanicalOptions,
+            semantic = semanticOptions
         )
     }
 }

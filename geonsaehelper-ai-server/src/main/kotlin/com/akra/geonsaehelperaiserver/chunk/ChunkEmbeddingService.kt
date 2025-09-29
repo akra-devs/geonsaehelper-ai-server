@@ -13,14 +13,15 @@ import java.util.UUID
 
 @Service
 class ChunkEmbeddingService(
-    private val semanticChunkService: SemanticChunkService,
+    private val chunkPipelineService: ChunkPipelineService,
+    private val mechanicalChunkService: MechanicalChunkService,
     private val aiEmbeddingService: AiEmbeddingService,
     private val vectorStoreService: VectorStoreService
 ) {
 
     fun chunkAndEmbed(
         text: String,
-        options: SemanticChunkService.SemanticChunkOptions
+        options: ChunkPipelineOptions
     ): ChunkEmbeddingResult {
         val chunkResponse = semanticChunkOrFallback(text, options)
         if (chunkResponse.content.isEmpty()) {
@@ -59,23 +60,26 @@ class ChunkEmbeddingService(
         )
     }
 
-    @Suppress("UNUSED_PARAMETER")
     private fun semanticChunkOrFallback(
         text: String,
-        options: SemanticChunkService.SemanticChunkOptions
+        options: ChunkPipelineOptions
     ): ChunkResponse {
         if (text.isEmpty()) {
             return ChunkResponse(emptyList())
         }
 
         // TODO: 의미 청킹 안정화 후 주석 해제 및 fallback 제거 예정입니다.
-         val semanticChunks = semanticChunkService.chunkText(text, options)
-         if (semanticChunks.content.isNotEmpty()) {
-             return semanticChunks
-         }
+        val semanticChunks = chunkPipelineService.chunkText(text, options)
+        if (semanticChunks.content.isNotEmpty()) {
+            return semanticChunks
+        }
 
         logger.debug("[ChunkEmbeddingService] Using mechanical chunk fallback")
-        return ChunkResponse(text.chunked(DEFAULT_CHUNK_SIZE))
+        val normalized = MarkdownNormalizer.normalize(text)
+        return mechanicalChunkService.chunk(
+            normalized,
+            options.mechanical
+        )
     }
 
     private fun upsertVectorDocuments(
@@ -100,6 +104,5 @@ class ChunkEmbeddingService(
 
     private companion object {
         private val logger = LoggerFactory.getLogger(ChunkEmbeddingService::class.java)
-        private const val DEFAULT_CHUNK_SIZE = 1000
     }
 }

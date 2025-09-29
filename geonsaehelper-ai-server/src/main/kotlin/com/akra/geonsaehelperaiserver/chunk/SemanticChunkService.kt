@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service
 
 @Service
 class SemanticChunkService(
-//    @Qualifier("ollamaChatModel")
     @Qualifier("openAiChatModel")
     private val chatModel: ChatModel,
     private val objectMapper: ObjectMapper
@@ -24,41 +23,19 @@ class SemanticChunkService(
         private const val DEFAULT_NUM_CTX = 2048
     }
 
-    data class SemanticChunkOptions(
-        val roleInstructions: String? = null,
-        val chunkSizeHint: Int = 900,
-        val maxChunkSize: Int = 1200,
-        val mechanicalOverlap: Int = 300
-    )
-
-    fun chunkText(text: String, options: SemanticChunkOptions = SemanticChunkOptions()): ChunkResponse {
-        val normalizationStart = System.currentTimeMillis()
-        val normalized = MarkdownNormalizer.normalize(text)
-        val normalizationDuration = System.currentTimeMillis() - normalizationStart
-        logger.debug("[SemanticChunkService] normalization took {} ms", normalizationDuration)
-
-        if (normalized.isEmpty()) {
-            logger.debug("[SemanticChunkService] skipping chunking for empty input")
+    fun chunk(
+        blocks: List<String>,
+        options: SemanticChunkOptions = SemanticChunkOptions()
+    ): ChunkResponse {
+        if (blocks.isEmpty()) {
+            logger.debug("[SemanticChunkService] skipping semantic chunking for empty blocks")
             return ChunkResponse(emptyList())
         }
-
-        val mechanicalStart = System.currentTimeMillis()
-        val mechanicalChunks = OverlappingTextChunker.chunk(
-            normalized,
-            chunkSize = options.maxChunkSize,
-            overlap = options.mechanicalOverlap
-        )
-        val mechanicalDuration = System.currentTimeMillis() - mechanicalStart
-        logger.debug(
-            "[SemanticChunkService] mechanical chunking took {} ms (chunks={})",
-            mechanicalDuration,
-            mechanicalChunks.size
-        )
 
         val systemPrompt = buildSystemPrompt(options)
         val semanticStart = System.currentTimeMillis()
 
-        val results = mechanicalChunks.mapIndexed { blockIndex, block ->
+        val results = blocks.mapIndexed { blockIndex, block ->
             val userPayload = mapOf(
                 "block_index" to blockIndex,
                 "chunk_size_hint" to options.chunkSizeHint,
@@ -97,7 +74,7 @@ class SemanticChunkService(
         logger.debug(
             "[SemanticChunkService] semantic chunking took {} ms (blocks={})",
             semanticDuration,
-            mechanicalChunks.size
+            blocks.size
         )
 
         return ChunkResponse(results.flatMap { it.content })

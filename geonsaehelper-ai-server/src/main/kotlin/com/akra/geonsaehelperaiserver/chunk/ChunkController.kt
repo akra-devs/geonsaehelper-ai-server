@@ -11,7 +11,7 @@ import org.springframework.web.multipart.MultipartFile
 @RestController
 @RequestMapping("/api/chunks")
 class ChunkController(
-    private val semanticChunkService: SemanticChunkService
+    private val chunkPipelineService: ChunkPipelineService
 ) {
 
     @PostMapping("/semantic", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
@@ -30,7 +30,7 @@ class ChunkController(
             mechanicalOverlap = mechanicalOverlap
         )
 
-        val chunks = semanticChunkService.chunkText(rawText, options)
+        val chunks = chunkPipelineService.chunkText(rawText, options)
         return SemanticChunkResponse(chunks.content)
     }
 }
