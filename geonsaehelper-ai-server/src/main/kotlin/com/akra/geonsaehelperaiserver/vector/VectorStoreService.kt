@@ -44,7 +44,7 @@ class VectorStoreService(
         }
 
         val documents = request.documents.map { payload ->
-            val metadata = sanitizeMetadata(payload.metadata)
+            val metadata = sanitizeMetadata(payload.metadata())
             createDocument(payload, metadata)
         }
 
@@ -207,11 +207,12 @@ class VectorStoreService(
     }
 
     private fun createDocument(
-        payload: VectorDocumentPayload,
+        payload: VectorPayload,
         metadata: MutableMap<String, Any>
     ): Document {
-        return if (payload.id != null) {
-            Document(payload.id, payload.content, metadata)
+        val payloadId = payload.id
+        return if (payloadId != null) {
+            Document(payloadId, payload.content, metadata)
         } else {
             Document(payload.content, metadata)
         }

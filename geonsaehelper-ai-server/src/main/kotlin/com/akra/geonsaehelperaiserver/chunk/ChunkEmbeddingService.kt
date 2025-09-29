@@ -4,7 +4,7 @@ import com.akra.geonsaehelperaiserver.ai.config.AiProperties
 import com.akra.geonsaehelperaiserver.ai.model.AiEmbeddingModel
 import com.akra.geonsaehelperaiserver.ai.model.AiEmbeddingRequest
 import com.akra.geonsaehelperaiserver.ai.service.AiEmbeddingService
-import com.akra.geonsaehelperaiserver.vector.VectorDocumentPayload
+import com.akra.geonsaehelperaiserver.vector.LoanProductVectorPayload
 import com.akra.geonsaehelperaiserver.vector.VectorStoreService
 import com.akra.geonsaehelperaiserver.vector.VectorUpsertRequest
 import org.slf4j.LoggerFactory
@@ -21,7 +21,8 @@ class ChunkEmbeddingService(
 
     fun chunkAndEmbed(
         text: String,
-        options: ChunkPipelineOptions
+        options: ChunkPipelineOptions,
+        productType: String? = null
     ): ChunkEmbeddingResult {
         val chunkResponse = semanticChunkOrFallback(text, options)
         if (chunkResponse.content.isEmpty()) {
@@ -49,7 +50,8 @@ class ChunkEmbeddingService(
         upsertVectorDocuments(
             items = items,
             model = embeddingResponse.model.value,
-            provider = embeddingResponse.provider.name
+            provider = embeddingResponse.provider.name,
+            productType = productType
         )
 
         return ChunkEmbeddingResult(
@@ -85,17 +87,19 @@ class ChunkEmbeddingService(
     private fun upsertVectorDocuments(
         items: List<ChunkEmbedding>,
         model: String,
-        provider: String
+        provider: String,
+        productType: String?
     ) {
+        val resolvedProductType = (productType?.takeIf { it.isNotBlank() }
+            ?: LoanProductVectorPayload.UNKNOWN_PRODUCT_TYPE)
         val documents = items.mapIndexed { index, item ->
-            VectorDocumentPayload(
+            LoanProductVectorPayload(
                 id = UUID.randomUUID().toString(),
                 content = item.chunk,
-                metadata = mapOf(
-                    "chunk_index" to index,
-                    "embedding_model" to model,
-                    "provider" to provider
-                )
+                productType = resolvedProductType,
+                chunkIndex = index,
+                embeddingModel = model,
+                provider = provider
             )
         }
 

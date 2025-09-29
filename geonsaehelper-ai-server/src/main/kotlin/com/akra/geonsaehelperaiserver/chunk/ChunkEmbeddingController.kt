@@ -20,7 +20,8 @@ class ChunkEmbeddingController(
         @RequestParam("roleInstructions", required = false) roleInstructions: String?,
         @RequestParam("chunkSizeHint", required = false) chunkSizeHint: Int?,
         @RequestParam("maxChunkSize", required = false) maxChunkSize: Int?,
-        @RequestParam("mechanicalOverlap", required = false) mechanicalOverlap: Int?
+        @RequestParam("mechanicalOverlap", required = false) mechanicalOverlap: Int?,
+        @RequestParam("productType", required = false) productType: String?
     ): ChunkEmbeddingResponse {
         val rawText = ChunkUploadRequestSupport.readMarkdownFile(file)
         val options = ChunkUploadRequestSupport.buildOptions(
@@ -30,7 +31,7 @@ class ChunkEmbeddingController(
             mechanicalOverlap = mechanicalOverlap
         )
 
-        val result = chunkEmbeddingService.chunkAndEmbed(rawText, options)
+        val result = chunkEmbeddingService.chunkAndEmbed(rawText, options, productType)
 
         return ChunkEmbeddingResponse(
             items = result.items.map { ChunkEmbeddingResponse.Item(it.chunk, it.embedding) },
