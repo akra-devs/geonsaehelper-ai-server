@@ -39,15 +39,15 @@ Content-Type: text/markdown
 --WebAppBoundary--
 Content-Disposition: form-data; name="chunkSizeHint"
 
-1000
+500
 --WebAppBoundary
 Content-Disposition: form-data; name="maxChunkSize"
 
-1200
+1000
 --WebAppBoundary
 Content-Disposition: form-data; name="mechanicalOverlap"
 
-300
+200
 --WebAppBoundary--
 
 ### Embedding sample chunks (test controller)
@@ -90,7 +90,7 @@ Content-Type: application/json
 {
   "query": {
     "type": "text",
-    "text": "전화번호"
+    "text": "신청방법"
   }
 }
 ###
