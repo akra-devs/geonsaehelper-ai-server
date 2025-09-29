@@ -1,5 +1,6 @@
 package com.akra.geonsaehelperaiserver.vector
 
+import com.akra.geonsaehelperaiserver.vector.LoanProductType
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.verify
@@ -31,7 +32,7 @@ class VectorStoreControllerTest {
                 LoanProductVectorPayload(
                     id = "doc-1",
                     content = "hello world",
-                    productType = "LOAN_A",
+                    productType = LoanProductType.GENERAL,
                     chunkIndex = 0,
                     embeddingModel = "model-x",
                     provider = "provider-y",

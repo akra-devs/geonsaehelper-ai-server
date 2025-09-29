@@ -21,7 +21,7 @@ data class VectorDocumentPayload(
 data class LoanProductVectorPayload(
     override val id: String? = null,
     override val content: String,
-    val productType: String,
+    val productType: LoanProductType,
     val chunkIndex: Int,
     val embeddingModel: String,
     val provider: String,
@@ -29,7 +29,7 @@ data class LoanProductVectorPayload(
 ) : VectorPayload {
 
     override fun metadata(): Map<String, Any?> = buildMap {
-        put(KEY_PRODUCT_TYPE, productType)
+        put(KEY_PRODUCT_TYPE, productType.code)
         put(KEY_CHUNK_INDEX, chunkIndex)
         put(KEY_EMBEDDING_MODEL, embeddingModel)
         put(KEY_PROVIDER, provider)
@@ -45,8 +45,6 @@ data class LoanProductVectorPayload(
         const val KEY_CHUNK_INDEX = "chunk_index"
         const val KEY_EMBEDDING_MODEL = "embedding_model"
         const val KEY_PROVIDER = "provider"
-        const val UNKNOWN_PRODUCT_TYPE = "UNKNOWN"
-
         private val reservedKeys = setOf(
             KEY_PRODUCT_TYPE,
             KEY_CHUNK_INDEX,

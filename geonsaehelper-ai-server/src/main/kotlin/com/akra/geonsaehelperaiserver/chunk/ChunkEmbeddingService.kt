@@ -4,6 +4,7 @@ import com.akra.geonsaehelperaiserver.ai.config.AiProperties
 import com.akra.geonsaehelperaiserver.ai.model.AiEmbeddingModel
 import com.akra.geonsaehelperaiserver.ai.model.AiEmbeddingRequest
 import com.akra.geonsaehelperaiserver.ai.service.AiEmbeddingService
+import com.akra.geonsaehelperaiserver.vector.LoanProductType
 import com.akra.geonsaehelperaiserver.vector.LoanProductVectorPayload
 import com.akra.geonsaehelperaiserver.vector.VectorStoreService
 import com.akra.geonsaehelperaiserver.vector.VectorUpsertRequest
@@ -22,7 +23,7 @@ class ChunkEmbeddingService(
     fun chunkAndEmbed(
         text: String,
         options: ChunkPipelineOptions,
-        productType: String? = null
+        productType: LoanProductType = LoanProductType.UNKNOWN
     ): ChunkEmbeddingResult {
         val chunkResponse = semanticChunkOrFallback(text, options)
         if (chunkResponse.content.isEmpty()) {
@@ -88,15 +89,13 @@ class ChunkEmbeddingService(
         items: List<ChunkEmbedding>,
         model: String,
         provider: String,
-        productType: String?
+        productType: LoanProductType
     ) {
-        val resolvedProductType = (productType?.takeIf { it.isNotBlank() }
-            ?: LoanProductVectorPayload.UNKNOWN_PRODUCT_TYPE)
         val documents = items.mapIndexed { index, item ->
             LoanProductVectorPayload(
                 id = UUID.randomUUID().toString(),
                 content = item.chunk,
-                productType = resolvedProductType,
+                productType = productType,
                 chunkIndex = index,
                 embeddingModel = model,
                 provider = provider

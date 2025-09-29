@@ -1,5 +1,6 @@
 package com.akra.geonsaehelperaiserver.chunk
 
+import com.akra.geonsaehelperaiserver.vector.LoanProductType
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
@@ -31,7 +32,11 @@ class ChunkEmbeddingController(
             mechanicalOverlap = mechanicalOverlap
         )
 
-        val result = chunkEmbeddingService.chunkAndEmbed(rawText, options, productType)
+        val result = chunkEmbeddingService.chunkAndEmbed(
+            rawText,
+            options,
+            LoanProductType.fromValue(productType)
+        )
 
         return ChunkEmbeddingResponse(
             items = result.items.map { ChunkEmbeddingResponse.Item(it.chunk, it.embedding) },

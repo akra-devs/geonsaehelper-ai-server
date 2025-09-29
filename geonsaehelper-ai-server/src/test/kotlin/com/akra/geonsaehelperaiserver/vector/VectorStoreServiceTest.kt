@@ -5,6 +5,7 @@ import com.akra.geonsaehelperaiserver.ai.model.AiEmbeddingModel
 import com.akra.geonsaehelperaiserver.ai.model.AiEmbeddingRequest
 import com.akra.geonsaehelperaiserver.ai.model.AiEmbeddingResponse
 import com.akra.geonsaehelperaiserver.ai.service.AiEmbeddingService
+import com.akra.geonsaehelperaiserver.vector.LoanProductType
 import com.akra.geonsaehelperaiserver.vector.LoanProductVectorPayload
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -63,7 +64,7 @@ class VectorStoreServiceTest {
                 LoanProductVectorPayload(
                     id = "doc-1",
                     content = "sample content",
-                    productType = "LOAN_A",
+                    productType = LoanProductType.GENERAL,
                     chunkIndex = 0,
                     embeddingModel = "model-x",
                     provider = "provider-y",
@@ -87,7 +88,7 @@ class VectorStoreServiceTest {
         assertThat(document.id).isEqualTo("doc-1")
         assertThat(document.text).isEqualTo("sample content")
         assertThat(document.metadata)
-            .containsEntry(LoanProductVectorPayload.KEY_PRODUCT_TYPE, "LOAN_A")
+            .containsEntry(LoanProductVectorPayload.KEY_PRODUCT_TYPE, LoanProductType.GENERAL.code)
             .containsEntry(LoanProductVectorPayload.KEY_CHUNK_INDEX, 0)
             .containsEntry(LoanProductVectorPayload.KEY_EMBEDDING_MODEL, "model-x")
             .containsEntry(LoanProductVectorPayload.KEY_PROVIDER, "provider-y")
