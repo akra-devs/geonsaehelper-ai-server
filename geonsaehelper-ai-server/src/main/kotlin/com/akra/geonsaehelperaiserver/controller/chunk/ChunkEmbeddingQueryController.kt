@@ -1,0 +1,73 @@
+package com.akra.geonsaehelperaiserver.controller.chunk
+
+import com.akra.geonsaehelperaiserver.domain.vector.VectorQuery
+import com.akra.geonsaehelperaiserver.domain.vector.VectorSearchRequest
+import com.akra.geonsaehelperaiserver.domain.vector.VectorStoreService
+import org.springframework.http.HttpStatus
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.server.ResponseStatusException
+
+@RestController
+@RequestMapping("/api/chunks/semantic")
+class ChunkEmbeddingQueryController(
+    private val vectorStoreService: VectorStoreService
+) {
+
+    data class QueryRequest(
+        val query: VectorQuery,
+        val topK: Int? = null
+    )
+
+    data class QueryResponse(
+        val matches: List<Match>
+    ) {
+        data class Match(
+            val id: String?,
+            val chunk: String,
+            val score: Double?,
+            val metadata: Map<String, Any?>
+        )
+    }
+
+    @PostMapping("/search")
+    fun search(@RequestBody request: QueryRequest): QueryResponse {
+        validateQuery(request.query)
+
+        val response = vectorStoreService.search(
+            VectorSearchRequest(
+                query = request.query,
+                topK = request.topK
+            )
+        )
+
+        val matches = response.documents.map { document ->
+            QueryResponse.Match(
+                id = document.id,
+                chunk = document.content,
+                score = document.score,
+                metadata = document.metadata
+            )
+        }
+
+        return QueryResponse(matches)
+    }
+
+    private fun validateQuery(query: VectorQuery) {
+        when (query) {
+            is VectorQuery.Text -> {
+                if (query.text.isBlank()) {
+                    throw ResponseStatusException(HttpStatus.BAD_REQUEST, "query must not be blank")
+                }
+            }
+
+            is VectorQuery.Vector -> {
+                if (query.values.isEmpty()) {
+                    throw ResponseStatusException(HttpStatus.BAD_REQUEST, "vector must not be empty")
+                }
+            }
+        }
+    }
+}
