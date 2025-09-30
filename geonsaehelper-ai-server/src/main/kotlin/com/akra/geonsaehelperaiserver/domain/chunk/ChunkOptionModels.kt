@@ -6,7 +6,6 @@ data class MechanicalChunkOptions(
 )
 
 data class SemanticChunkOptions(
-    val roleInstructions: String? = null,
     val chunkSizeHint: Int = 500,
     val maxChunkSize: Int = 1000,
 )

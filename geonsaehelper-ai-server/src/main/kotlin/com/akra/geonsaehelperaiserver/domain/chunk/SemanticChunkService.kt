@@ -171,10 +171,6 @@ class SemanticChunkService(
 
         val promptWithSizes = basePrompt + sizeNotes
 
-        return if (options.roleInstructions.isNullOrBlank()) {
-            promptWithSizes
-        } else {
-            promptWithSizes + "\n추가 역할 지침: ${options.roleInstructions.trim()}"
-        }
+        return promptWithSizes
     }
 }

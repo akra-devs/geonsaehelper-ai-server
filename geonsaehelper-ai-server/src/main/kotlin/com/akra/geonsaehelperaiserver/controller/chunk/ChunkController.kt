@@ -20,14 +20,12 @@ class ChunkController(
     @PostMapping("/semantic", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     fun chunkSemantically(
         @RequestPart("file") file: MultipartFile,
-        @RequestParam("roleInstructions", required = false) roleInstructions: String?,
         @RequestParam("chunkSizeHint", required = false) chunkSizeHint: Int?,
         @RequestParam("maxChunkSize", required = false) maxChunkSize: Int?,
         @RequestParam("mechanicalOverlap", required = false) mechanicalOverlap: Int?
     ): SemanticChunkResponse {
         val rawText = ChunkUploadRequestSupport.readMarkdownFile(file)
         val options = ChunkUploadRequestSupport.buildOptions(
-            roleInstructions = roleInstructions,
             chunkSizeHint = chunkSizeHint,
             maxChunkSize = maxChunkSize,
             mechanicalOverlap = mechanicalOverlap

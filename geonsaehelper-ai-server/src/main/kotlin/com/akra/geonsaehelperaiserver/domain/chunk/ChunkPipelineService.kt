@@ -33,21 +33,7 @@ class ChunkPipelineService(
             return mechanicalResponse
         }
 
-        val semanticOptions = alignSemanticOptions(options)
-        return semanticChunkService.chunk(mechanicalResponse.content, semanticOptions)
-    }
-
-    private fun alignSemanticOptions(options: ChunkPipelineOptions): SemanticChunkOptions {
-        val mechanicalSize = options.mechanical.chunkSize
-        val maxChunkSize = options.semantic.maxChunkSize.coerceAtMost(mechanicalSize)
-        if (maxChunkSize < options.semantic.maxChunkSize) {
-            logger.debug(
-                "[ChunkPipelineService] adjusting semantic maxChunkSize {} -> {} to match mechanical chunk size",
-                options.semantic.maxChunkSize,
-                maxChunkSize
-            )
-        }
-        return options.semantic.copy(maxChunkSize = maxChunkSize)
+        return semanticChunkService.chunk(mechanicalResponse.content, options.semantic)
     }
 
     private companion object {

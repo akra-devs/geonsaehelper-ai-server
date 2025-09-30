@@ -21,7 +21,6 @@ class ChunkEmbeddingController(
     @PostMapping("/semantic/embed", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     fun chunkAndEmbed(
         @RequestPart("file") file: MultipartFile,
-        @RequestParam("roleInstructions", required = false) roleInstructions: String?,
         @RequestParam("chunkSizeHint", required = false) chunkSizeHint: Int?,
         @RequestParam("maxChunkSize", required = false) maxChunkSize: Int?,
         @RequestParam("mechanicalOverlap", required = false) mechanicalOverlap: Int?,
@@ -29,7 +28,6 @@ class ChunkEmbeddingController(
     ): ChunkEmbeddingResponse {
         val rawText = ChunkUploadRequestSupport.readMarkdownFile(file)
         val options = ChunkUploadRequestSupport.buildOptions(
-            roleInstructions = roleInstructions,
             chunkSizeHint = chunkSizeHint,
             maxChunkSize = maxChunkSize,
             mechanicalOverlap = mechanicalOverlap

@@ -26,7 +26,6 @@ object ChunkUploadRequestSupport {
     }
 
     fun buildOptions(
-        roleInstructions: String?,
         chunkSizeHint: Int?,
         maxChunkSize: Int?,
         mechanicalOverlap: Int?
@@ -38,7 +37,6 @@ object ChunkUploadRequestSupport {
             overlap = mechanicalOverlap ?: defaults.mechanical.overlap
         )
         val semanticOptions = defaults.semantic.copy(
-            roleInstructions = roleInstructions ?: defaults.semantic.roleInstructions,
             chunkSizeHint = chunkSizeHint ?: defaults.semantic.chunkSizeHint,
             maxChunkSize = resolvedMaxChunkSize
         )
