@@ -1,5 +1,5 @@
 ### Semantic chunking request example
-# @timeout 6000
+# @timeout 60000
 POST 127.0.0.1:8080/api/chunks/semantic
 Content-Type: multipart/form-data; boundary=WebAppBoundary
 
@@ -14,15 +14,15 @@ Content-Disposition: form-data; name="roleInstructions"
 --WebAppBoundary
 Content-Disposition: form-data; name="chunkSizeHint"
 
-1000
+500
 --WebAppBoundary
 Content-Disposition: form-data; name="maxChunkSize"
 
-1200
+1000
 --WebAppBoundary
 Content-Disposition: form-data; name="mechanicalOverlap"
 
-300
+200
 --WebAppBoundary--
 
 

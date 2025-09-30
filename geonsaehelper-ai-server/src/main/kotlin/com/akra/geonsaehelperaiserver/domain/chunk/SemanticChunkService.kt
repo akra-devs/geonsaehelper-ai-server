@@ -77,7 +77,12 @@ class SemanticChunkService(
             blocks.size
         )
 
-        return ChunkResponse(results.flatMap { it.content })
+        val normalizedChunks = results
+            .flatMap { it.content }
+            .map { SemanticChunkAfterNormalizer.normalize(it) }
+            .filter { it.isNotBlank() }
+
+        return ChunkResponse(normalizedChunks)
     }
 
     private fun ollamaOptions(): OllamaOptions =
