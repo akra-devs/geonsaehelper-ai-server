@@ -63,7 +63,8 @@ data class VectorUpsertRequest(
 
 data class VectorSearchRequest(
     val query: VectorQuery,
-    val topK: Int? = null
+    val topK: Int? = null,
+    val productTypes: Set<LoanProductType>? = null
 )
 
 data class VectorDocumentResponse(

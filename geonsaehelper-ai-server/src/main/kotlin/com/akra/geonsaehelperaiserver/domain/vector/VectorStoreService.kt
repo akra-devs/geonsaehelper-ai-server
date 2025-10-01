@@ -55,13 +55,16 @@ class VectorStoreService(
 
     fun search(request: VectorSearchRequest): VectorSearchResponse {
         val topK = request.topK?.takeIf { it > 0 } ?: properties.defaultTopK
+        val productTypes = request.productTypes?.takeUnless { it.isEmpty() } ?: emptySet()
 
         val documents = when (val query = request.query) {
-            is VectorQuery.Text -> searchWithTextQuery(query, topK)
-            is VectorQuery.Vector -> searchWithVectorQuery(query, topK)
+            is VectorQuery.Text -> searchWithTextQuery(query, topK, productTypes)
+            is VectorQuery.Vector -> searchWithVectorQuery(query, topK, productTypes)
         }
 
-        val responses = documents.map { document ->
+        val filteredDocuments = filterByProductTypes(documents, productTypes)
+
+        val responses = filteredDocuments.map { document ->
             VectorDocumentResponse(
                 id = document.id,
                 content = document.text ?: "",
@@ -73,7 +76,11 @@ class VectorStoreService(
         return VectorSearchResponse(responses)
     }
 
-    private fun searchWithTextQuery(query: VectorQuery.Text, topK: Int): List<Document> {
+    private fun searchWithTextQuery(
+        query: VectorQuery.Text,
+        topK: Int,
+        productTypes: Set<LoanProductType>
+    ): List<Document> {
         val trimmed = query.text.trim()
         if (trimmed.isEmpty()) {
             logger.debug("[VectorStoreService] Search skipped (blank text query)")
@@ -82,27 +89,38 @@ class VectorStoreService(
 
         val embedded = embedQuery(trimmed)
         if (embedded != null) {
-            searchByVector(embedded, topK)?.let { return it }
+            searchByVector(embedded, topK, productTypes)?.let { return it }
             logger.debug("[VectorStoreService] Falling back to semantic search after vector attempt failed")
         }
 
-        return similaritySearch(trimmed, topK)
+        return similaritySearch(trimmed, topK, productTypes)
     }
 
-    private fun searchWithVectorQuery(query: VectorQuery.Vector, topK: Int): List<Document> {
+    private fun searchWithVectorQuery(
+        query: VectorQuery.Vector,
+        topK: Int,
+        productTypes: Set<LoanProductType>
+    ): List<Document> {
         if (query.values.isEmpty()) {
             logger.debug("[VectorStoreService] Search skipped (empty vector query)")
             return emptyList()
         }
 
-        return searchByVector(query.values, topK) ?: emptyList()
+        return searchByVector(query.values, topK, productTypes) ?: emptyList()
     }
 
-    private fun similaritySearch(text: String, topK: Int): List<Document> {
-        val searchRequest = SearchRequest.builder()
+    private fun similaritySearch(
+        text: String,
+        topK: Int,
+        productTypes: Set<LoanProductType>
+    ): List<Document> {
+        val builder = SearchRequest.builder()
             .query(text)
             .topK(topK)
-            .build()
+
+        buildMetadataFilterExpression(productTypes)?.let(builder::filterExpression)
+
+        val searchRequest = builder.build()
 
         return vectorStore.similaritySearch(searchRequest) ?: emptyList()
     }
@@ -116,18 +134,25 @@ class VectorStoreService(
             null
         }
 
-    private fun searchByVector(vector: List<Float>, topK: Int): List<Document>? {
+    private fun searchByVector(
+        vector: List<Float>,
+        topK: Int,
+        productTypes: Set<LoanProductType>
+    ): List<Document>? {
         val qdrantStore = vectorStore as? QdrantVectorStore ?: return null
         val qdrantClient = resolveQdrantClient(qdrantStore) ?: return null
         val collectionName = resolveCollectionName(qdrantStore) ?: return null
 
-        val searchPoints = Points.SearchPoints.newBuilder()
+        val searchPointsBuilder = Points.SearchPoints.newBuilder()
             .setCollectionName(collectionName)
             .setLimit(topK.toLong())
             .setWithPayload(WithPayloadSelectorFactory.enable(true))
             .addAllVector(EmbeddingUtils.toList(vector.toFloatArray()))
             .setScoreThreshold(SCORE_THRESHOLD)
-            .build()
+
+        buildQdrantFilter(productTypes)?.let(searchPointsBuilder::setFilter)
+
+        val searchPoints = searchPointsBuilder.build()
 
         return try {
             val scoredPoints = qdrantClient.searchAsync(searchPoints).get()
@@ -194,6 +219,62 @@ class VectorStoreService(
             result[key] = converted
         }
         return result
+    }
+
+    private fun filterByProductTypes(documents: List<Document>, productTypes: Set<LoanProductType>): List<Document> {
+        if (productTypes.isEmpty()) {
+            return documents
+        }
+
+        val normalized = productTypes.map { it.name }.toSet()
+        return documents.filter { document ->
+            val value = document.metadata[LoanProductVectorPayload.KEY_PRODUCT_TYPE] as? String
+            value != null && normalized.contains(value)
+        }
+    }
+
+    private fun buildMetadataFilterExpression(productTypes: Set<LoanProductType>): String? {
+        if (productTypes.isEmpty()) {
+            return null
+        }
+
+        return productTypes.joinToString(
+            prefix = "(",
+            postfix = ")",
+            separator = " || "
+        ) { type ->
+            "${LoanProductVectorPayload.KEY_PRODUCT_TYPE} == '${type.name}'"
+        }
+    }
+
+    private fun buildQdrantFilter(productTypes: Set<LoanProductType>): Points.Filter? {
+        if (productTypes.isEmpty()) {
+            return null
+        }
+
+        val matchBuilder = Points.Match.newBuilder()
+
+        if (productTypes.size == 1) {
+            matchBuilder.keyword = productTypes.first().name
+        } else {
+            val keywords = Points.RepeatedStrings.newBuilder()
+                .addAllStrings(productTypes.map { it.name })
+                .build()
+            matchBuilder.keywords = keywords
+        }
+
+        val fieldCondition = Points.FieldCondition.newBuilder()
+            .setKey(LoanProductVectorPayload.KEY_PRODUCT_TYPE)
+            .setMatch(matchBuilder.build())
+            .build()
+
+        val condition = Points.Condition.newBuilder()
+            .setField(fieldCondition)
+            .build()
+
+        return Points.Filter.newBuilder()
+            .addMust(condition)
+            .build()
     }
 
     private fun sanitizeMetadata(source: Map<String, Any?>): MutableMap<String, Any> {

@@ -102,7 +102,14 @@ class VectorStoreServiceTest {
 
     @Test
     fun `search maps documents and uses default topK`() {
-        val storedDocument = Document("doc-1", "hello world", mutableMapOf<String, Any>("source" to "test"))
+        val storedDocument = Document(
+            "doc-1",
+            "hello world",
+            mutableMapOf<String, Any>(
+                "source" to "test",
+                LoanProductVectorPayload.KEY_PRODUCT_TYPE to LoanProductType.RENT_STANDARD.name
+            )
+        )
         Mockito.doReturn(listOf(storedDocument))
             .`when`(vectorStore)
             .similaritySearch(ArgumentMatchers.any(SearchRequest::class.java))
@@ -123,6 +130,59 @@ class VectorStoreServiceTest {
 
         assertThat(lastEmbedRequest).isNotNull
         assertThat(lastEmbedRequest?.inputs).containsExactly("hello")
+    }
+
+    @Test
+    fun `search applies product type metadata filter`() {
+        val storedDocument = Document(
+            "doc-1",
+            "hello world",
+            mutableMapOf<String, Any>(
+                LoanProductVectorPayload.KEY_PRODUCT_TYPE to LoanProductType.RENT_STANDARD.name,
+                "source" to "test"
+            )
+        )
+        Mockito.doReturn(listOf(storedDocument))
+            .`when`(vectorStore)
+            .similaritySearch(ArgumentMatchers.any(SearchRequest::class.java))
+
+        val response = service.search(
+            VectorSearchRequest(
+                query = VectorQuery.Text("hello"),
+                topK = 2,
+                productTypes = setOf(LoanProductType.RENT_STANDARD)
+            )
+        )
+
+        assertThat(response.documents).hasSize(1)
+
+        val searchCaptor = ArgumentCaptor.forClass(SearchRequest::class.java)
+        verify(vectorStore).similaritySearch(searchCaptor.capture())
+        assertThat(searchCaptor.value.filterExpression).isNotNull
+    }
+
+    @Test
+    fun `search filters out documents with different product type`() {
+        val storedDocument = Document(
+            "doc-1",
+            "hello world",
+            mutableMapOf<String, Any>(
+                LoanProductVectorPayload.KEY_PRODUCT_TYPE to LoanProductType.RENT_NEWLYWED.name,
+                "source" to "test"
+            )
+        )
+        Mockito.doReturn(listOf(storedDocument))
+            .`when`(vectorStore)
+            .similaritySearch(ArgumentMatchers.any(SearchRequest::class.java))
+
+        val response = service.search(
+            VectorSearchRequest(
+                query = VectorQuery.Text("hello"),
+                productTypes = setOf(LoanProductType.RENT_STANDARD)
+            )
+        )
+
+        assertThat(response.documents).isEmpty()
     }
 
     @Test
