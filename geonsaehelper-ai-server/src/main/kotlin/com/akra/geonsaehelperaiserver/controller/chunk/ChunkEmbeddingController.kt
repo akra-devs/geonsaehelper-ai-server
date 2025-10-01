@@ -24,7 +24,7 @@ class ChunkEmbeddingController(
         @RequestParam("chunkSizeHint", required = false) chunkSizeHint: Int?,
         @RequestParam("maxChunkSize", required = false) maxChunkSize: Int?,
         @RequestParam("mechanicalOverlap", required = false) mechanicalOverlap: Int?,
-        @RequestParam("productType", required = false) productType: String?
+        @RequestParam("productType", required = false) productType: LoanProductType?
     ): ChunkEmbeddingResponse {
         val rawText = ChunkUploadRequestSupport.readMarkdownFile(file)
         val options = ChunkUploadRequestSupport.buildOptions(
@@ -36,7 +36,7 @@ class ChunkEmbeddingController(
         val result = chunkEmbeddingService.chunkAndEmbed(
             rawText,
             options,
-            LoanProductType.fromValue(productType)
+            productType ?: LoanProductType.UNKNOWN
         )
 
         return ChunkEmbeddingResponse(

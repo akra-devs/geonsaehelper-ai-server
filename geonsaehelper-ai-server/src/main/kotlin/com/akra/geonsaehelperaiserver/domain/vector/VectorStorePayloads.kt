@@ -29,7 +29,8 @@ data class LoanProductVectorPayload(
 ) : VectorPayload {
 
     override fun metadata(): Map<String, Any?> = buildMap {
-        put(KEY_PRODUCT_TYPE, productType.code)
+        put(KEY_PRODUCT_TYPE, productType.name)
+        put(KEY_PRODUCT_TYPE_DESCRIPTION, productType.description)
         put(KEY_CHUNK_INDEX, chunkIndex)
         put(KEY_EMBEDDING_MODEL, embeddingModel)
         put(KEY_PROVIDER, provider)
@@ -42,11 +43,13 @@ data class LoanProductVectorPayload(
 
     companion object {
         const val KEY_PRODUCT_TYPE = "product_type"
+        const val KEY_PRODUCT_TYPE_DESCRIPTION = "product_type_description"
         const val KEY_CHUNK_INDEX = "chunk_index"
         const val KEY_EMBEDDING_MODEL = "embedding_model"
         const val KEY_PROVIDER = "provider"
         private val reservedKeys = setOf(
             KEY_PRODUCT_TYPE,
+            KEY_PRODUCT_TYPE_DESCRIPTION,
             KEY_CHUNK_INDEX,
             KEY_EMBEDDING_MODEL,
             KEY_PROVIDER

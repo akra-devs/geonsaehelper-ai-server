@@ -88,7 +88,11 @@ class VectorStoreServiceTest {
         assertThat(document.id).isEqualTo("doc-1")
         assertThat(document.text).isEqualTo("sample content")
         assertThat(document.metadata)
-            .containsEntry(LoanProductVectorPayload.KEY_PRODUCT_TYPE, LoanProductType.RENT_STANDARD.code)
+            .containsEntry(LoanProductVectorPayload.KEY_PRODUCT_TYPE, LoanProductType.RENT_STANDARD.name)
+            .containsEntry(
+                LoanProductVectorPayload.KEY_PRODUCT_TYPE_DESCRIPTION,
+                LoanProductType.RENT_STANDARD.description
+            )
             .containsEntry(LoanProductVectorPayload.KEY_CHUNK_INDEX, 0)
             .containsEntry(LoanProductVectorPayload.KEY_EMBEDDING_MODEL, "model-x")
             .containsEntry(LoanProductVectorPayload.KEY_PROVIDER, "provider-y")

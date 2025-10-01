@@ -4,61 +4,52 @@ import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonValue
 
 enum class LoanProductType(
-    @get:JsonValue val code: String,
     val description: String,
     private val aliases: Set<String> = emptySet()
 ) {
     RENT_STANDARD(
-        code = "RENT_STANDARD",
         description = "버팀목전세자금",
         aliases = setOf("GENERAL", "RENT_BUTTRESS_JEONSE")
     ),
     RENT_YOUTH_BEOTIMMOK(
-        code = "RENT_YOUTH_BEOTIMMOK",
         description = "청년전용 버팀목전세자금",
         aliases = setOf("YOUTH", "RENT_YOUTH_JEONSE")
     ),
     RENT_NEWLYWED(
-        code = "RENT_NEWLYWED",
         description = "신혼부부전용 전세자금",
         aliases = setOf("NEWLYWED")
     ),
     RENT_NEWBORN_SPECIAL(
-        code = "RENT_NEWBORN_SPECIAL",
         description = "신생아 특례 버팀목대출",
         aliases = setOf("신생아 특례 버팀목전세자금")
     ),
     RENT_RENEWAL_SUPPORT(
-        code = "RENT_RENEWAL_SUPPORT",
         description = "갱신만료 임차인 지원 버팀목전세자금"
     ),
     RENT_DAMAGES_STANDARD(
-        code = "RENT_DAMAGES_STANDARD",
         description = "전세피해 임차인 버팀목전세자금"
     ),
     RENT_DAMAGES_PRIORITY(
-        code = "RENT_DAMAGES_PRIORITY",
         description = "전세사기피해자 최우선변제금 버팀목 전세자금 대출"
     ),
     REFINANCE_DAMAGES(
-        code = "REFINANCE_DAMAGES",
         description = "전세피해임차인대상 버팀목전세대출대환",
         aliases = setOf("RENT_JEONSE_DAMAGE_REFINANCE")
     ),
     RENT_VULNERABLE_MOVE(
-        code = "RENT_VULNERABLE_MOVE",
         description = "주거취약계층 이주지원 버팀목전세자금",
         aliases = setOf("RENT_VULNERABLE_RELOCATION")
     ),
     RENT_YOUTH_MONTHLY(
-        code = "RENT_YOUTH_MONTHLY",
         description = "청년전용 보증부월세대출",
         aliases = setOf("RENT_YOUTH_MONTHLY_SUPPORT")
     ),
     UNKNOWN(
-        code = "UNKNOWN",
         description = "미지정"
     );
+
+    @JsonValue
+    fun jsonValue(): String = name
 
     fun matches(raw: String): Boolean {
         if (raw.isBlank()) {
@@ -69,9 +60,6 @@ enum class LoanProductType(
             return false
         }
         if (name.equals(candidate, ignoreCase = true)) {
-            return true
-        }
-        if (code.equals(candidate, ignoreCase = true)) {
             return true
         }
         if (description.normalizeLoanProductKey().equals(candidate, ignoreCase = true)) {
@@ -104,6 +92,10 @@ private fun String.normalizeLoanProductKey(): String {
 
     if (value.contains('/')) {
         value = value.substringAfterLast('/')
+    }
+
+    if (value.contains('\\')) {
+        value = value.substringAfterLast('\\')
     }
 
     if (value.startsWith("LoanProductType.", ignoreCase = true)) {
