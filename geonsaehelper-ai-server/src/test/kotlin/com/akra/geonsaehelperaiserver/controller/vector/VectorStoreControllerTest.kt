@@ -39,7 +39,7 @@ class VectorStoreControllerTest {
                 LoanProductVectorPayload(
                     id = "doc-1",
                     content = "hello world",
-                    productType = LoanProductType.GENERAL,
+                    productType = LoanProductType.RENT_STANDARD,
                     chunkIndex = 0,
                     embeddingModel = "model-x",
                     provider = "provider-y",

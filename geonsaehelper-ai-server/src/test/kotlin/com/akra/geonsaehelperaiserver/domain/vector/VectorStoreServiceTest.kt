@@ -64,7 +64,7 @@ class VectorStoreServiceTest {
                 LoanProductVectorPayload(
                     id = "doc-1",
                     content = "sample content",
-                    productType = LoanProductType.GENERAL,
+                    productType = LoanProductType.RENT_STANDARD,
                     chunkIndex = 0,
                     embeddingModel = "model-x",
                     provider = "provider-y",
@@ -88,7 +88,7 @@ class VectorStoreServiceTest {
         assertThat(document.id).isEqualTo("doc-1")
         assertThat(document.text).isEqualTo("sample content")
         assertThat(document.metadata)
-            .containsEntry(LoanProductVectorPayload.KEY_PRODUCT_TYPE, LoanProductType.GENERAL.code)
+            .containsEntry(LoanProductVectorPayload.KEY_PRODUCT_TYPE, LoanProductType.RENT_STANDARD.code)
             .containsEntry(LoanProductVectorPayload.KEY_CHUNK_INDEX, 0)
             .containsEntry(LoanProductVectorPayload.KEY_EMBEDDING_MODEL, "model-x")
             .containsEntry(LoanProductVectorPayload.KEY_PROVIDER, "provider-y")
