@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.ai.chat.messages.SystemMessage
 import org.springframework.ai.chat.messages.UserMessage
 import org.springframework.ai.chat.model.ChatModel
+import org.springframework.ai.chat.model.StreamingChatModel
 import org.springframework.ai.chat.prompt.Prompt
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.beans.factory.annotation.Qualifier
@@ -156,8 +157,12 @@ class LoanAdvisorService(
 class SpringAiStreamingChatClientResolver(
     @Qualifier("ollamaChatModel")
     private val ollamaChatModelProvider: ObjectProvider<ChatModel>,
+    @Qualifier("ollamaStreamingChatModel")
+    private val ollamaStreamingChatModelProvider: ObjectProvider<StreamingChatModel>,
     @Qualifier("openAiChatModel")
-    private val openAiChatModelProvider: ObjectProvider<ChatModel>
+    private val openAiChatModelProvider: ObjectProvider<ChatModel>,
+    @Qualifier("openAiStreamingChatModel")
+    private val openAiStreamingChatModelProvider: ObjectProvider<StreamingChatModel>
 ) : LoanStreamingChatClientResolver {
 
     override fun resolve(provider: AiProperties.Provider): LoanStreamingChatClient {
@@ -169,6 +174,11 @@ class SpringAiStreamingChatClientResolver(
             "Chat model for provider $provider is not configured"
         )
 
+        val streamingChatModel = when (provider) {
+            AiProperties.Provider.OLLAMA -> ollamaStreamingChatModelProvider.getIfAvailable()
+            AiProperties.Provider.OPENAI -> openAiStreamingChatModelProvider.getIfAvailable()
+        }
+
         return LoanStreamingChatClient { systemPrompt, userPrompt ->
             val messages = buildList {
                 if (!systemPrompt.isNullOrBlank()) {
@@ -178,14 +188,31 @@ class SpringAiStreamingChatClientResolver(
             }
 
             val prompt = Prompt(messages)
-            val response = chatModel.call(prompt)
-            val content = response.results
-                .joinToString(separator = "\n") { generation ->
-                    generation.output?.text.orEmpty()
-                }
-                .trim()
 
-            Flux.fromIterable(splitIntoChunks(content))
+            val streamingFlux = streamingChatModel?.stream(prompt)
+                ?.flatMap { response ->
+                    val chunk = response.results
+                        .mapNotNull { generation -> generation.output?.text }
+                        .joinToString(separator = "")
+                        .trim()
+
+                    if (chunk.isBlank()) {
+                        Flux.empty()
+                    } else {
+                        Flux.just(chunk)
+                    }
+                }
+
+            streamingFlux ?: run {
+                val response = chatModel.call(prompt)
+                val content = response.results
+                    .joinToString(separator = "\n") { generation ->
+                        generation.output?.text.orEmpty()
+                    }
+                    .trim()
+
+                Flux.fromIterable(splitIntoChunks(content))
+            }
         }
     }
 
