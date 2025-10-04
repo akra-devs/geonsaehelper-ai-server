@@ -1,0 +1,26 @@
+@host = http://localhost:8080
+@loanAdvisorStream = {{host}}/api/loan-advisor/stream
+
+### Loan advisor SSE stream (default provider)
+POST {{loanAdvisorStream}}
+Accept: text/event-stream
+Content-Type: application/json
+
+{
+  "question": "전세사기 피해자를 위한 지원 대출 상품을 추천해줘."
+}
+
+### Loan advisor SSE stream with filters
+POST {{loanAdvisorStream}}
+Accept: text/event-stream
+Content-Type: application/json
+
+{
+  "question": "청년을 위한 버팀목 전세자금 관련 혜택을 알려줘.",
+  "productTypes": [
+    "RENT_YOUTH_BEOTIMMOK",
+    "RENT_DAMAGES_PRIORITY"
+  ],
+  "topK": 3,
+  "provider": "OLLAMA"
+}
