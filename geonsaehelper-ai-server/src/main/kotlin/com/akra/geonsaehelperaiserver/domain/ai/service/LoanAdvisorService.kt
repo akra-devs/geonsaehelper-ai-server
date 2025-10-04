@@ -49,7 +49,7 @@ class LoanAdvisorService(
             }
 
             val provider = resolveProvider(request.provider)
-            val productTypes = request.productTypes ?: emptySet()
+            val productTypes = request.productTypes ?: throw IllegalArgumentException("productTypes can not be empty")
             val searchRequest = VectorSearchRequest(
                 query = VectorQuery.Text(question),
                 topK = request.topK,
