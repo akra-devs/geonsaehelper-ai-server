@@ -16,9 +16,8 @@ Accept: text/event-stream
 Content-Type: application/json
 
 {
-  "question": "청년을 위한 버팀목 전세자금 관련 혜택을 알려줘.",
+  "question": "해당 상품의 대출 조건을 알 수 있을까?",
   "productTypes": [
-    "RENT_YOUTH_BEOTIMMOK",
     "RENT_DAMAGES_PRIORITY"
   ],
   "topK": 3,

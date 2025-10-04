@@ -45,6 +45,10 @@ Content-Disposition: form-data; name="maxChunkSize"
 Content-Disposition: form-data; name="mechanicalOverlap"
 
 200
+--WebAppBoundary
+Content-Disposition: form-data; name="productType"
+
+RENT_DAMAGES_PRIORITY
 --WebAppBoundary--
 
 ### Embedding sample chunks (test controller)
