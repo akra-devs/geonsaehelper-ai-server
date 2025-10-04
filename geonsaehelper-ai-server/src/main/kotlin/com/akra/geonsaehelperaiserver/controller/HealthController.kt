@@ -2,6 +2,7 @@ package com.akra.geonsaehelperaiserver.controller
 
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.boot.info.BuildProperties
+import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
@@ -14,6 +15,7 @@ import java.util.LinkedHashMap
 
 @RestController
 @RequestMapping("/api")
+@CrossOrigin(origins = ["*"])
 class HealthController(
     buildPropertiesProvider: ObjectProvider<BuildProperties>
 ) {

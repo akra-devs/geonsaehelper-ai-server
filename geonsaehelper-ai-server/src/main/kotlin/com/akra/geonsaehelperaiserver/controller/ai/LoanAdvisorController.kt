@@ -6,6 +6,7 @@ import com.akra.geonsaehelperaiserver.domain.ai.service.LoanAdvisorService
 import org.springframework.http.MediaType.parseMediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.http.codec.ServerSentEvent
+import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -14,6 +15,7 @@ import reactor.core.publisher.Flux
 
 @RestController
 @RequestMapping("/api/loan-advisor")
+@CrossOrigin(origins = ["*"])
 class LoanAdvisorController(
     private val loanAdvisorService: LoanAdvisorService
 ) {
