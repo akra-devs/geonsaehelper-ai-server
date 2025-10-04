@@ -16,7 +16,7 @@ Accept: text/event-stream
 Content-Type: application/json
 
 {
-  "question": "해당 상품의 대출 조건을 알 수 있을까?",
+  "question": "대출 가능 금액을 알려주세요",
   "productTypes": [
     "RENT_DAMAGES_PRIORITY"
   ],

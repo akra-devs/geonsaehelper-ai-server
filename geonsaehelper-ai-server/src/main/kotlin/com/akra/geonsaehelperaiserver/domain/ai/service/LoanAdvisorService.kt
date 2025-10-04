@@ -58,6 +58,7 @@ class LoanAdvisorService(
 
             val searchResponse = vectorStoreService.search(searchRequest)
             val contexts = buildContexts(searchResponse.documents)
+            logTopContexts(contexts)
             val systemPrompt = buildSystemPrompt()
             val userPrompt = buildUserMessage(question, contexts)
 
@@ -66,7 +67,10 @@ class LoanAdvisorService(
                 .resolve(provider)
                 .stream(systemPrompt.takeIf { it.isNotEmpty() }, userPrompt)
                 .filter { it.isNotBlank() }
-                .map { chunk -> LoanAdvisorStreamEvent.AnswerChunk(chunk) }
+                .map { chunk ->
+                    logAnswerChunk(chunk)
+                    LoanAdvisorStreamEvent.AnswerChunk(chunk)
+                }
                 .doOnError { ex ->
                     logger.warn("[LoanAdvisorService] Streaming chat failed: {}", ex.message)
                 }
@@ -89,6 +93,23 @@ class LoanAdvisorService(
             )
         }
         return provider
+    }
+
+    private fun logTopContexts(contexts: List<LoanAdvisorContext>) {
+        if (contexts.isEmpty()) {
+            logger.info("[LoanAdvisorService] Vector search returned no contexts")
+            return
+        }
+        val summary = contexts.take(3).joinToString(separator = "; ") { context ->
+            "#${context.rank}:${context.productType ?: "미분류"} score=${context.score?.let { String.format("%.3f", it) } ?: "n/a"}"
+        }
+        logger.info("[LoanAdvisorService] Top vector contexts: {}", summary)
+    }
+
+    private fun logAnswerChunk(chunk: String) {
+        val normalized = chunk.trim()
+        val preview = if (normalized.length > 200) normalized.take(200) + "…" else normalized
+        logger.info("[LoanAdvisorService] Answer chunk: {}", preview)
     }
 
     private fun buildContexts(documents: List<VectorDocumentResponse>): List<LoanAdvisorContext> =
