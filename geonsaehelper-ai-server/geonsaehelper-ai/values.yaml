@@ -1,8 +1,8 @@
 replicaCount: 1
 
 image:
-  repository: ghcr.io/your-org/geonsaehelper-ai-server
-  tag: "0.0.1"
+  repository: ghcr.io/akra-devs/geonsaehelper-ai-server
+  tag: "1.0.1"
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
@@ -22,10 +22,10 @@ podSecurityContext: {}
 securityContext: {}
 
 service:
-  type: ClusterIP
+  type: NodePort
   port: 8080
   targetPort: 8080
-  nodePort: null
+  nodePort: 32100
 
 ingress:
   enabled: false
@@ -78,12 +78,12 @@ env:
 
 secretEnv:
   - name: APP_AI_OPENAI_API_KEY
-    secretName: null
+    secretName: geonsaehelper-ai-openai
     secretKey: APP_AI_OPENAI_API_KEY
 
 secret:
   create: false
-  name: ""
+  name: geonsaehelper-ai-openai
   data:
     APP_AI_OPENAI_API_KEY: ""
 
