@@ -5,6 +5,7 @@ import com.akra.geonsaehelperaiserver.domain.vector.LoanProductType
 
 data class LoanAdvisorRequest(
     val question: String,
+    val userContext: Map<String, String>? = null,
     val productTypes: Set<LoanProductType>? = null,
     val topK: Int? = null,
     val provider: AiProperties.Provider? = null

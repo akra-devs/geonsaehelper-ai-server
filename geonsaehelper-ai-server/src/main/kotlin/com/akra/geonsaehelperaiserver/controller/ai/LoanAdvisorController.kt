@@ -28,11 +28,12 @@ class LoanAdvisorController(
         @RequestBody request: LoanAdvisorRequest
     ): ResponseEntity<Flux<ServerSentEvent<LoanAdvisorStreamEvent>>> {
         logger.info(
-            "[LoanAdvisorController] Incoming stream request question={} topK={} productTypes={} provider={}",
+            "[LoanAdvisorController] Incoming stream request question={} topK={} productTypes={} provider={} userContextKeys={}",
             request.question,
             request.topK,
             request.productTypes?.joinToString() ?: "none",
-            request.provider ?: "default"
+            request.provider ?: "default",
+            request.userContext?.takeIf { it.isNotEmpty() }?.keys?.joinToString() ?: "none"
         )
         val stream = loanAdvisorService.answerStream(request)
             .map { event ->

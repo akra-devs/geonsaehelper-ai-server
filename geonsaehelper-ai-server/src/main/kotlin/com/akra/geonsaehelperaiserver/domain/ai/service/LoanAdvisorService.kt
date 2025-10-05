@@ -9,6 +9,7 @@ import com.akra.geonsaehelperaiserver.domain.vector.VectorDocumentResponse
 import com.akra.geonsaehelperaiserver.domain.vector.VectorQuery
 import com.akra.geonsaehelperaiserver.domain.vector.VectorSearchRequest
 import com.akra.geonsaehelperaiserver.domain.vector.VectorStoreService
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.slf4j.LoggerFactory
 import org.springframework.ai.chat.messages.SystemMessage
 import org.springframework.ai.chat.messages.UserMessage
@@ -36,7 +37,8 @@ interface LoanStreamingChatClientResolver {
 class LoanAdvisorService(
     private val vectorStoreService: VectorStoreService,
     private val aiProperties: AiProperties,
-    private val streamingChatClientResolver: LoanStreamingChatClientResolver
+    private val streamingChatClientResolver: LoanStreamingChatClientResolver,
+    private val objectMapper: ObjectMapper
 ) {
 
     private val logger = LoggerFactory.getLogger(LoanAdvisorService::class.java)
@@ -60,7 +62,7 @@ class LoanAdvisorService(
             val contexts = buildContexts(searchResponse.documents)
             logTopContexts(contexts)
             val systemPrompt = buildSystemPrompt()
-            val userPrompt = buildUserMessage(question, contexts)
+            val userPrompt = buildUserMessage(question, contexts, request.userContext)
 
             val contextEvent = LoanAdvisorStreamEvent.Context(contexts)
             val answerFlux = streamingChatClientResolver
@@ -138,7 +140,8 @@ class LoanAdvisorService(
 
     private fun buildUserMessage(
         question: String,
-        contexts: List<LoanAdvisorContext>
+        contexts: List<LoanAdvisorContext>,
+        userContext: Map<String, String>?
     ): String {
         val contextSection = if (contexts.isEmpty()) {
             "관련된 벡터 검색 결과가 없습니다. 자료가 없다고 명확히 밝히고 추가 정보를 요청하세요."
@@ -154,9 +157,20 @@ class LoanAdvisorService(
             }
         }
 
-        return """
-        아래는 질문과 연관된 참고 자료입니다.
+        val userContextSection = userContext
+            ?.takeIf { it.isNotEmpty() }
+            ?.let { context ->
+                objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(context)
+            }
+            ?: "{}"
 
+        return """
+        아래는 질문자에 대한 기초 정보와 질문과 연관된 참고 자료입니다.
+
+        [사용자 정보(JSON 형식)]
+        $userContextSection
+
+        [참고 자료]
         $contextSection
 
         사용자 질문: "$question"
