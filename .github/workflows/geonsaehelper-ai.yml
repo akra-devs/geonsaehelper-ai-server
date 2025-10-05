@@ -1,0 +1,70 @@
+name: Build and Deploy Geonsaehelper AI
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+env:
+  SERVICE_NAME: geonsaehelper-ai
+  IMAGE_NAME: geonsaehelper-ai-server
+  CHART_DIR: ./geonsaehelper-ai
+
+defaults:
+  run:
+    working-directory: geonsaehelper-ai-server
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: 태그에서 버전 추출
+        run: |
+          TAG=${GITHUB_REF_NAME}
+          VERSION=${TAG#v}
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Gradle wrapper 권한 부여
+        run: chmod +x ./gradlew
+
+      - name: Build with Gradle
+        run: ./gradlew clean bootJar -Pversion=${{ env.VERSION }}
+
+      - name: Set up QEMU (ARM64)
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: linux/arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 레지스트리 네임스페이스를 소문자로 설정
+        run: echo "REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
+
+      - name: Build and Push Docker image
+        run: |
+          docker buildx build \
+            --platform linux/arm64 \
+            --build-arg VERSION=${{ env.VERSION }} \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }} \
+            --push .

@@ -1,0 +1,95 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/your-org/geonsaehelper-ai-server
+  tag: "0.0.1"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+  nodePort: null
+
+ingress:
+  enabled: false
+  className: traefik
+  annotations: {}
+  hosts:
+    - host: ai.geonsae.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 500m
+    memory: 1Gi
+
+livenessProbe:
+  httpGet:
+    path: /actuator/health/liveness
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /actuator/health/readiness
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 5
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 60
+
+env:
+  - name: SPRING_AI_VECTORSTORE_QDRANT_HOST
+    value: qdrant
+  - name: SPRING_AI_VECTORSTORE_QDRANT_PORT
+    value: "6334"
+  - name: SPRING_AI_OLLAMA_BASE_URL
+    value: http://ollama:11434/
+  - name: APP_AI_OPENAI_ENABLED
+    value: "true"
+
+secretEnv:
+  - name: APP_AI_OPENAI_API_KEY
+    secretName: null
+    secretKey: APP_AI_OPENAI_API_KEY
+
+secret:
+  create: false
+  name: ""
+  data:
+    APP_AI_OPENAI_API_KEY: ""
+
+volumes: []
+volumeMounts: []
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
