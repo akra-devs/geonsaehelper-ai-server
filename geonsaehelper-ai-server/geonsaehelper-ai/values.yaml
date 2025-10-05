@@ -80,6 +80,9 @@ secretEnv:
   - name: APP_AI_OPENAI_API_KEY
     secretName: geonsaehelper-ai-openai
     secretKey: APP_AI_OPENAI_API_KEY
+  - name: SPRING_AI_OPENAI_API_KEY
+    secretName: geonsaehelper-ai-openai
+    secretKey: APP_AI_OPENAI_API_KEY
 
 secret:
   create: false
