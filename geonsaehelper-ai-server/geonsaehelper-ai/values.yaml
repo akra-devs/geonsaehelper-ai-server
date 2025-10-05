@@ -28,13 +28,12 @@ service:
   nodePort: 32101
 
 ingress:
-  enabled: false
+  enabled: true
   className: traefik
   annotations: {}
   hosts:
-    - host: ai.geonsae.example.com
-      paths:
-        - path: /
+    - paths:
+        - path: /geonsaehelper-ai
           pathType: Prefix
   tls: []
 
