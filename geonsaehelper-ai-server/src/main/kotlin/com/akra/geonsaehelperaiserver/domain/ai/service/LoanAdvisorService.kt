@@ -38,6 +38,7 @@ class LoanAdvisorService(
     private val vectorStoreService: VectorStoreService,
     private val aiProperties: AiProperties,
     private val streamingChatClientResolver: LoanStreamingChatClientResolver,
+    private val loanProductFallbackProvider: LoanProductFallbackProvider,
     private val objectMapper: ObjectMapper
 ) {
 
@@ -59,12 +60,30 @@ class LoanAdvisorService(
             )
 
             val searchResponse = vectorStoreService.search(searchRequest)
-            val contexts = buildContexts(searchResponse.documents)
-            logTopContexts(contexts)
-            val systemPrompt = buildSystemPrompt()
-            val userPrompt = buildUserMessage(question, contexts, request.userContext)
+            val vectorContexts = buildContexts(searchResponse.documents)
+            val fallbackContexts = loanProductFallbackProvider.createContexts(productTypes)
+            if (fallbackContexts.isNotEmpty()) {
+                val fallbackTypes = fallbackContexts.joinToString { it.productTypeDescription ?: it.productType ?: "미지정" }
+                if (vectorContexts.isEmpty()) {
+                    logger.info(
+                        "[LoanAdvisorService] Vector search returned no documents; using fallback summaries for {}",
+                        fallbackTypes
+                    )
+                } else {
+                    logger.info(
+                        "[LoanAdvisorService] Appending fallback summaries for {}",
+                        fallbackTypes
+                    )
+                }
+            }
+            val combinedContexts = (vectorContexts + fallbackContexts)
+                .mapIndexed { index, context -> context.copy(rank = index + 1) }
 
-            val contextEvent = LoanAdvisorStreamEvent.Context(contexts)
+            logTopContexts(combinedContexts)
+            val systemPrompt = buildSystemPrompt()
+            val userPrompt = buildUserMessage(question, combinedContexts, request.userContext)
+
+            val contextEvent = LoanAdvisorStreamEvent.Context(combinedContexts)
             val answerFlux = streamingChatClientResolver
                 .resolve(provider)
                 .stream(systemPrompt.takeIf { it.isNotEmpty() }, userPrompt)
@@ -99,13 +118,13 @@ class LoanAdvisorService(
 
     private fun logTopContexts(contexts: List<LoanAdvisorContext>) {
         if (contexts.isEmpty()) {
-            logger.info("[LoanAdvisorService] Vector search returned no contexts")
+            logger.info("[LoanAdvisorService] No contexts available (vector + fallback)")
             return
         }
         val summary = contexts.take(3).joinToString(separator = "; ") { context ->
             "#${context.rank}:${context.productType ?: "미분류"} score=${context.score?.let { String.format("%.3f", it) } ?: "n/a"}"
         }
-        logger.info("[LoanAdvisorService] Top vector contexts: {}", summary)
+        logger.info("[LoanAdvisorService] Top contexts (vector/fallback): {}", summary)
     }
 
     private fun logAnswerChunk(chunk: String) {
