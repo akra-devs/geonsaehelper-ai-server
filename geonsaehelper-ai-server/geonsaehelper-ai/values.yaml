@@ -76,6 +76,8 @@ env:
     value: http://ollama:11434/
   - name: APP_AI_OPENAI_ENABLED
     value: "true"
+  - name: SERVER_SERVLET_CONTEXT_PATH
+    value: /geonsaehelper-ai
 
 secretEnv:
   - name: APP_AI_OPENAI_API_KEY
