@@ -85,7 +85,7 @@ secretEnv:
     secretKey: APP_AI_OPENAI_API_KEY
 
 secret:
-  create: false
+  create: true
   name: geonsaehelper-ai-openai
   data:
     APP_AI_OPENAI_API_KEY: ""

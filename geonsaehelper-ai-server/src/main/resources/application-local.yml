@@ -1,0 +1,45 @@
+spring:
+  application:
+    name: geonsaehelper-ai-server
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.model.ollama.autoconfigure.OllamaEmbeddingAutoConfiguration
+  ai:
+    ollama:
+      base-url: ${SPRING_AI_OLLAMA_BASE_URL:http://localhost:11434/}
+      chat:
+        options:
+          model: ${app.ai.ollama.model}
+      embedding:
+        enabled: false
+    vectorstore:
+      qdrant:
+        host: ${SPRING_AI_VECTORSTORE_QDRANT_HOST:localhost}
+        port: ${SPRING_AI_VECTORSTORE_QDRANT_PORT:6334}
+        collection-name: geonsaehelper_embeddings_openai
+        initialize-schema: true
+        use-tls: false
+        embedding:
+          model-bean-name: openAiEmbeddingModel
+    openai:
+      enabled: ${app.ai.openai.enabled:true}
+      api-key: ${SPRING_AI_OPENAI_API_KEY:${app.ai.openai.api-key:}}
+      embedding:
+        options:
+          model: ${app.ai.openai.embedding-model}
+
+app:
+  ai:
+    default-provider: OLLAMA
+    default-system-prompt: >-
+      You are a tutor that helps Geonsae users practice and review content concisely.
+    ollama:
+      model: gemma3:12b
+      embedding-model: embeddinggemma:300m
+    vectorstore:
+      default-top-k: 4
+    openai:
+      enabled: true
+      model: gpt-5-mini
+      embedding-model: text-embedding-3-small
+      api-key: ${APP_AI_OPENAI_API_KEY:${SPRING_AI_OPENAI_API_KEY:}}
