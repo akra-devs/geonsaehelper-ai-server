@@ -46,19 +46,21 @@ resources:
     cpu: 500m
     memory: 1Gi
 
-livenessProbe:
-  httpGet:
-    path: /actuator/health/liveness
-    port: http
-  initialDelaySeconds: 30
-  periodSeconds: 10
+# livenessProbe:
+#   httpGet:
+#     path: /actuator/health/liveness
+#     port: http
+#   initialDelaySeconds: 60
+#   periodSeconds: 10
+#   failureThreshold: 5
 
-readinessProbe:
-  httpGet:
-    path: /actuator/health/readiness
-    port: http
-  initialDelaySeconds: 10
-  periodSeconds: 5
+# readinessProbe:
+#   httpGet:
+#     path: /actuator/health/readiness
+#     port: http
+#   initialDelaySeconds: 60
+#   periodSeconds: 5
+#   failureThreshold: 5
 
 autoscaling:
   enabled: false
