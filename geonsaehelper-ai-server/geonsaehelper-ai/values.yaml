@@ -101,6 +101,7 @@ secret:
 volumes: []
 volumeMounts: []
 
-nodeSelector: {}
+nodeSelector:
+  role: performance
 tolerations: []
 affinity: {}
