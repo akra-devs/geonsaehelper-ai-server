@@ -76,7 +76,7 @@ autoscaling:
 
 env:
   - name: SPRING_AI_VECTORSTORE_QDRANT_HOST
-    value: qdrant
+    value: qdrant.default.svc.cluster.local
   - name: SPRING_AI_VECTORSTORE_QDRANT_PORT
     value: "6334"
   - name: SPRING_AI_OLLAMA_BASE_URL
