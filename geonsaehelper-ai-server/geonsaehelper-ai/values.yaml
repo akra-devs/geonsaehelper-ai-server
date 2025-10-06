@@ -33,7 +33,6 @@ ingress:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
-    traefik.ingress.kubernetes.io/rewrite-target: /
   hosts:
     - host: akradev.duckdns.org
       paths:
@@ -83,6 +82,8 @@ env:
     value: http://ollama:11434/
   - name: APP_AI_OPENAI_ENABLED
     value: "true"
+  - name: SERVER_SERVLET_CONTEXT_PATH
+    value: /geonsaehelper-ai
 
 secretEnv:
   - name: APP_AI_OPENAI_API_KEY
