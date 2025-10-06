@@ -1,19 +1,6 @@
-@host = http://localhost:8080
+#@host = http://localhost:8080
+@host = http://akradev.duckdns.org:10000
 @loanAdvisorStream = {{host}}/api/loan-advisor/stream
-
-### Loan advisor SSE stream (default provider)
-POST {{loanAdvisorStream}}
-Accept: text/event-stream
-Content-Type: application/json
-
-{
-  "question": "전세사기 피해자를 위한 지원 대출 상품을 추천해줘.",
-  "userContext": {
-    "age": "32",
-    "annualIncome": "52,000,000",
-    "employmentStatus": "정규직"
-  }
-}
 
 ### Loan advisor SSE stream with filters
 POST {{loanAdvisorStream}}
