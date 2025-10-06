@@ -33,6 +33,7 @@ ingress:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.middlewares: default-strip-geonsaehelper-ai@kubernetescrd
   hosts:
     - host: akradev.duckdns.org
       paths:
@@ -75,15 +76,13 @@ autoscaling:
 
 env:
   - name: SPRING_AI_VECTORSTORE_QDRANT_HOST
-    value: qdrant.default.svc.cluster.local
+    value: qdrant
   - name: SPRING_AI_VECTORSTORE_QDRANT_PORT
     value: "6334"
   - name: SPRING_AI_OLLAMA_BASE_URL
     value: http://ollama:11434/
   - name: APP_AI_OPENAI_ENABLED
     value: "true"
-  - name: SERVER_SERVLET_CONTEXT_PATH
-    value: /geonsaehelper-ai
 
 secretEnv:
   - name: APP_AI_OPENAI_API_KEY
